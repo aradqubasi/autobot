@@ -1,18 +1,28 @@
 const dgram = require('dgram');
-const server = dgram.createSocket('udp4');
+var servers = [];
+//const server = dgram.createSocket('udp4');
+const config = require('./config.js');
 
-server.on('error', (err) => {
-  console.log(`server error:\n${err.stack}`);
-  server.close();
-});
+config.app.ports.forEach(function(port) {
 
-server.on('message', (msg, rinfo) => {
-  console.log(`server got: ${msg} from ${rinfo.address}:${rinfo.port}`);
-});
+  const server = dgram.createSocket('udp4');
 
-server.on('listening', () => {
-  const address = server.address();
-  console.log(`server listening ${address.address}:${address.port}`);
-});
+  server.on('error', (err) => {
+    console.log(`server ${port} error:\n${err.stack}`);
+    server.close();
+  });
 
-server.bind(41234); 
+  server.on('message', (msg, rinfo) => {
+    console.log(`server ${port} got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+  });
+
+  server.on('listening', () => {
+    const address = server.address();
+    console.log(`server ${port} listening ${address.address}:${address.port}`);
+  });
+  
+  server.bind(port); 
+
+  servers.push(server);
+
+}, this);
