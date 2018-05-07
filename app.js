@@ -1,7 +1,20 @@
 const dgram = require('dgram');
 var servers = [];
-//const server = dgram.createSocket('udp4');
 const config = require('./config.js');
+var dbo = require('./dbo.js');
+
+const process = function (message, server, remote) {
+  console.log(`processing ${message} from ${remote.address}:${remote.port}`);
+  dbo.instance.collection('inbound').insertOne({"request":String(message)}, (error, result) => {
+      if (error) {
+        console.log(error);
+      }
+      else {
+        console.debug(result);
+      }
+    });
+  
+};
 
 config.app.ports.forEach(function(port) {
 
@@ -12,8 +25,9 @@ config.app.ports.forEach(function(port) {
     server.close();
   });
 
-  server.on('message', (msg, rinfo) => {
-    console.log(`server ${port} got: ${msg} from ${rinfo.address}:${rinfo.port}`);
+  server.on('message', (message, remote) => {
+    console.log(`server ${port} got: ${message} from ${remote.address}:${remote.port}`);
+    process(message, server, remote);
   });
 
   server.on('listening', () => {
