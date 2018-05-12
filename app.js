@@ -5,7 +5,7 @@ var dbo = require('./dbo.js');
 
 const process = function (message, server, remote) {
   console.log(`processing ${message} from ${remote.address}:${remote.port}`);
-  dbo.instance.collection('inbound').insertOne({"request":String(message)}, (error, result) => {
+  dbo.instance.collection('inbound').insertOne({"request":JSON.parse(message)}, (error, result) => {
       if (error) {
         console.log(error);
       }
