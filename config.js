@@ -1,5 +1,9 @@
 const config = {
-    app: {
+    client: {
+        user: 'first',
+        port: 41234
+    },
+    reception: {
         ports: [4568]
     },
     db: {
