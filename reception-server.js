@@ -3,7 +3,7 @@ var servers = [];
 const config = require('./config.js').reception;
 var dbo = require('./dbo.js');
 
-const process = function (message, server, remote) {
+const process = async function (message, server, remote) {
     console.log(`processing ${message} from ${remote.address}:${remote.port}`);
 
     var request = { 

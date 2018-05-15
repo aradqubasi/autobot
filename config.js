@@ -9,7 +9,7 @@ const config = {
     db: {
         host: 'localhost',
         port: 27017,
-        name: 'autobot2',
+        name: 'autobot256',
         collections: {
             inbound: 'inbound',
             signalists: 'signalists'
