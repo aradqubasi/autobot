@@ -1,46 +1,57 @@
 const dgram = require('dgram');
 var servers = [];
 const config = require('./config.js').reception;
-var dbo = require('./dbo.js');
+var dba = require('./dba.js');
 
 const process = async function (message, server, remote) {
     console.log(`processing ${message} from ${remote.address}:${remote.port}`);
 
     var request = { 
-        body: JSON.parse(message)
+        receivedOn: Date.now(),
+        body: JSON.parse(message),
+        result: {
+            status: '',
+            messages: []
+        }
     }
 
-    dbo.signalists().findOne({user: request.logints}, function(error, result) {
-        if (error) {
-            console.log(error);
-            request.result = 'error';
-        }
-        else if (!(result)) {
-            console.log('signalist not found');
-            request.result = 'signalist not found';
+    dba.signalists().findOne({user: request.logints}).then((result) => {
+        if (result == null) {
+            request.result.status = 'failure';
+            request.result.messages.append({message: 'signalist not found'});
         }
         else if (result.passts != request.body.passts) {
-            console.log(`password missmatch: ${result.logints} - ${result.passts} != ${request.body.passts}`);
-            request.result = `password missmatch: ${result.logints} - ${result.passts} != ${request.body.passts}`;
+            request.result.status = 'failure';
+            request.result.messages.append({message: `password missmatch: ${result.logints} - ${result.passts} != ${request.body.passts}`});
         }
         else {
+            request.result.status = 'success';
             result.subscriptions.forEach(function(client) {
                 server.send(Buffer.from(JSON.stringify(request.body)), client.port, client.address, function (error) {
                     if (error) {
-                        console.log(`error during sending to ${client.address}:${client.port}`);
-                        request.result = `error during sending to ${client.address}:${client.port}`;
+                        request.result.status = 'failure';
+                        request.result.messages.append({
+                            message: `error during sending to ${client.address}:${client.port}`,
+                            error: error
+                        });
                     }
                 });
             });
-            dbo.inbounds().insertOne(request, (error, result) => {
-                if (error) {
-                    console.log(error);
-                }
-                else {
-                    console.log('processing finished');
-                }
-            });
-        }
+            
+        };
+    }).catch((error) => {
+        request.result.status = 'failure';
+        request.result.messages.append({
+            message: 'can not find signalist',
+            error: error
+        });
+    }).then(() => {
+        request.forwardedOn = Date.now();
+        dba.inbounds().insertOne(request).then((result) => {
+            console.log('processing finished');
+        }).catch((error) => {
+            console.log(error);
+        });
     });
 };
 
