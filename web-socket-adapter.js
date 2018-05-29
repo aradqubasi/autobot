@@ -80,11 +80,11 @@ WebSocketAdapter.prototype.open = function() {
                     console.log(`#${this.id} buy`);
                     if (response.error) {
                         // console.log(`${this.id} got error response`);
-                        console.log(`${this.id} failed to follow advice of signalist ${response.req_id}`);
-                        // console.debug(error);
+                        console.log(`${this.id} failed to follow advice of signalist`);
+                        console.debug(error);
                     }
                     else {
-                        console.log(`${this.id} brought lot by advice of signalist ${response.req_id}`);
+                        console.log(`${this.id} brought lot by advice of signalist`);
                     }
                     break;
                 default:
@@ -115,22 +115,8 @@ WebSocketAdapter.prototype.open = function() {
         }
     });
 }
-WebSocketAdapter.prototype.buy = function(contract, currency, symbol, amount, duration, unit, signalist) {
-    const buy = {
-        buy: 1,
-        price: amount,
-        parameters: {
-            currency: currency,
-            symbol: symbol,
-            amount: amount, 
-            basis: 'stake',
-            duration: duration,
-            duration_unit: unit,
-            contract_type: contract
-        },
-        req_id: signalist
-    }
-    this.instance.send(JSON.stringify(buy));
+WebSocketAdapter.prototype.buy = function(enrichedSignal) {
+    this.instance.send(JSON.stringify(enrichedSignal));
 }
 
 WebSocketAdapter.prototype.close = function() {

@@ -1,13 +1,19 @@
 const config = {
     client: {
+        broadcast: {
+            address: '0.0.0.0',
+            port: 40001
+        },
         user: 'first',
         port: 41234,
-        token: 'eHlqUl1lXl1Efm5',
         url: 'wss://ws.binaryws.com/websockets/v3?app_id=1',
         count: 4
     },
     reception: {
-        ports: [4568]
+        broadcast: {
+            address: '255.255.255.255',
+            port: 40001
+        }
     },
     db: {
         host: 'localhost',
@@ -16,28 +22,6 @@ const config = {
         collections: {
             inbound: 'inbound',
             signalists: 'signalists'
-        },
-        testing: {
-            signalists: [
-                {
-                    logints: 'user',
-                    passts: 'p@$$word',
-                    subscriptions: [
-                        {
-                            address: '127.0.0.1',
-                            port: 41234
-                        },
-                        {
-                            address: '127.0.0.1',
-                            port: 41235
-                        },
-                        {
-                            address: '127.0.0.1',
-                            port: 41236
-                        }
-                    ]
-                }
-            ]
         }
     }
 };

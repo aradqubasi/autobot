@@ -1,81 +1,69 @@
 const dgram = require('dgram');
-var servers = [];
 const config = require('./config.js').reception;
-var dba = require('./dba.js');
+const uuidv4 = require('uuid/v4');
+const Cache = require('./cache.js');
+// var dba = require('./dba.js');
+var UdpServerAdapter = require('./udp-server-adapter.js');
 
-const process = async function (message, server, remote) {
-    console.log(`processing ${message} from ${remote.address}:${remote.port}`);
+const server = new UdpServerAdapter();
+const cache = new Cache();
+const client = dgram.createSocket('udp4');
+client.bind(() => {
+    client.setBroadcast(true);
+});
+// client.setBroadcast(true);
 
-    var request = { 
-        receivedOn: Date.now(),
-        body: JSON.parse(message),
-        result: {
-            status: '',
-            messages: []
-        }
-    }
-
-    dba.signalists().findOne({user: request.logints}).then((result) => {
-        if (result == null) {
-            request.result.status = 'failure';
-            request.result.messages.append({message: 'signalist not found'});
-        }
-        else if (result.passts != request.body.passts) {
-            request.result.status = 'failure';
-            request.result.messages.append({message: `password missmatch: ${result.logints} - ${result.passts} != ${request.body.passts}`});
+const process = async function (message) {
+    var signalId = uuidv4();
+    var receivedOn = Date.now();
+    var parsedOn = 0;
+    var finishedOn = 0;
+    var signalistId = '';
+    var processError = {};
+    var inboundMessage = message;
+    var outboundMessage = {};
+    try {
+        outboundMessage = JSON.parse(message);
+        const signalist = cache.signalists[outboundMessage.logints];
+        if (signalist && signalist.password == outboundMessage.passts) {
+            outboundMessage.signalistId = signalist.id;
+            outboundMessage.signalId = signalId;
+            const datagram = Buffer.from(JSON.stringify(outboundMessage));
+            const address = config.broadcast.address;
+            const port = config.broadcast.port;
+            parsedOn = Date.now();
+            client.send(datagram, port, address, (error) => { 
+                // if (error) {
+                //     inboundError = error;
+                // }
+                // request.sentOn = Date.now();
+                if (error) {console.log(error);}
+            });
         }
         else {
-            request.result.status = 'success';
-            result.subscriptions.forEach(function(client) {
-                server.send(Buffer.from(JSON.stringify(request.body)), client.port, client.address, function (error) {
-                    if (error) {
-                        request.result.status = 'failure';
-                        request.result.messages.append({
-                            message: `error during sending to ${client.address}:${client.port}`,
-                            error: error
-                        });
-                    }
-                });
-            });
-            
-        };
-    }).catch((error) => {
-        request.result.status = 'failure';
-        request.result.messages.append({
-            message: 'can not find signalist',
-            error: error
-        });
-    }).then(() => {
-        request.forwardedOn = Date.now();
-        dba.inbounds().insertOne(request).then((result) => {
-            console.log('processing finished');
-        }).catch((error) => {
-            console.log(error);
-        });
-    });
+            throw new Error('invalid credentials');
+        }
+    } catch (error) {
+        processError = error;
+    }
+    // finishedOn = Date.now();
+    //console.debug(request);
+
+    //dba.inbound.insertOne(request);
 };
 
-config.ports.forEach(function(port) {
+server.onMessage((message) => {
+    // console.debug(JSON.parse(message).debug);
+    process(message);
+});
+server.onError((error) => {
+    console.log(`error!`);
+    console.debug(error);
+});
 
-    const server = dgram.createSocket('udp4');
 
-    server.on('error', (err) => {
-        console.log(`server ${port} error:\n${err.stack}`);
-        server.close();
-    });
-
-    server.on('message', (message, remote) => {
-        console.log(`server ${port} got: ${message} from ${remote.address}:${remote.port}`);
-        process(message, server, remote);
-    });
-
-    server.on('listening', () => {
-        const address = server.address();
-        console.log(`server ${port} listening ${address.address}:${address.port}`);
-    });
-  
-    server.bind(port); 
-
-    servers.push(server);
-
-}, this);
+cache.ports.forEach(function(port) {
+    server.open(port);
+});
+cache.onPortOpen((port) => { server.open(port); });
+cache.onPortClose((port) => { server.close(port); });
