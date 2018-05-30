@@ -14,8 +14,8 @@ client.bind(() => {
 // client.setBroadcast(true);
 
 const process = async function (message) {
-    var signalId = uuidv4();
     var receivedOn = Date.now();
+    var signalId = uuidv4();
     var parsedOn = 0;
     var finishedOn = 0;
     var signalistId = '';
@@ -28,15 +28,12 @@ const process = async function (message) {
         if (signalist && signalist.password == outboundMessage.passts) {
             outboundMessage.signalistId = signalist.id;
             outboundMessage.signalId = signalId;
+            outboundMessage.receivedOn = receivedOn;
             const datagram = Buffer.from(JSON.stringify(outboundMessage));
             const address = config.broadcast.address;
             const port = config.broadcast.port;
             parsedOn = Date.now();
             client.send(datagram, port, address, (error) => { 
-                // if (error) {
-                //     inboundError = error;
-                // }
-                // request.sentOn = Date.now();
                 if (error) {console.log(error);}
             });
         }

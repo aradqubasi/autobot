@@ -34,7 +34,8 @@ const process = function (message) {
             passthrough: {
                 signalistId: inboundMessage.signalistId,
                 signalId: inboundMessage.signalId,
-                botId: cache.botId
+                botId: cache.botId,
+                receivedByAutobotOn: inboundMessage.receivedOn
             }
         }
 
@@ -56,6 +57,7 @@ const process = function (message) {
         }
         
         parsedOn = Date.now();
+        outboundMessage.passthrough.sentToBinaryOn = parsedOn;
         //send data to binary
         if (wsClients.length == 0) {
             console.log('Socket list is empty!');

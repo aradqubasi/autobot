@@ -3,28 +3,28 @@
     this.onportopen = (port) => {};
     this.onportclose = (port) => {};
 
-    setInterval(() => {
-        this.ports = [4568]
-        this.onportopen(4568);
-    }, 10000);
-    setTimeout(() => {
-        setInterval(() => {
-            this.ports = [4568, 4569]
-            this.onportopen(4569);
-        }, 10000);
-    }, 3000);
-    setTimeout(() => {
-        setInterval(() => {
-            this.ports = [4569]
-            this.onportclose(4568);
-        }, 10000);
-    }, 6000);
-    setTimeout(() => {
-        setInterval(() => {
-            this.ports = []
-            this.onportclose(4569);
-        }, 10000);
-    }, 9000);
+    // setInterval(() => {
+    //     this.ports = [4568]
+    //     this.onportopen(4568);
+    // }, 10000);
+    // setTimeout(() => {
+    //     setInterval(() => {
+    //         this.ports = [4568, 4569]
+    //         this.onportopen(4569);
+    //     }, 10000);
+    // }, 3000);
+    // setTimeout(() => {
+    //     setInterval(() => {
+    //         this.ports = [4569]
+    //         this.onportclose(4568);
+    //     }, 10000);
+    // }, 6000);
+    // setTimeout(() => {
+    //     setInterval(() => {
+    //         this.ports = []
+    //         this.onportclose(4569);
+    //     }, 10000);
+    // }, 9000);
 
 
     this.signalists = {};
@@ -42,10 +42,10 @@
 
     this.token = 'eHlqUl1lXl1Efm5';
     this.ontokenupdate = (token) => { }
-    setTimeout(() => {
-        this.token = 'eHlqUl1lXl1Efm5';
-        this.ontokenupdate('eHlqUl1lXl1Efm5');
-    }, 9000);
+    // setTimeout(() => {
+    //     this.token = 'eHlqUl1lXl1Efm5';
+    //     this.ontokenupdate('eHlqUl1lXl1Efm5');
+    // }, 9000);
 
     this.subscriptions = {};
     this.subscriptions['a3e25c6a-7416-46b2-a377-643404b4249f'] = {

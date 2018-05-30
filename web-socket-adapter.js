@@ -84,7 +84,13 @@ WebSocketAdapter.prototype.open = function() {
                         console.debug(error);
                     }
                     else {
-                        console.log(`${this.id} brought lot by advice of signalist`);
+                        if (response.passthrough && response.passthrough.receivedByAutobotOn && response.passthrough.sentToBinary) {
+                            const time = response.passthrough.sentToBinary - response.passthrough.receivedByAutobotOn;
+                            console.log(`${this.id} brought lot by advice of signalist in ${time} ms`);
+                        }
+                        else {
+                            console.log(`${this.id} brought lot by advice of signalist`);
+                        }
                     }
                     break;
                 default:

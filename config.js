@@ -15,6 +15,9 @@ const config = {
             port: 40001
         }
     },
+    cache: {
+        generateDebugValues: false
+    },
     db: {
         host: 'localhost',
         port: 27017,
