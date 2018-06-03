@@ -3,7 +3,7 @@ const uuidv4 = require('uuid/v4');
 var id = 1;
 
 function WebSocketAdapter(url, token) {
-    console.log('instanciating');
+    console.log('instantiating');
     this.url = url;
     console.log(this.url);
     this.isAuthorized = false;
@@ -12,6 +12,7 @@ function WebSocketAdapter(url, token) {
     this.id = id;
     id++;
     this.token = token;
+    this.onbinaryresponse = () => { }
 }
 
 WebSocketAdapter.prototype.authorize = function(token) {
@@ -68,16 +69,17 @@ WebSocketAdapter.prototype.open = function() {
                     break;
                 case 'ping': 
                     if (response.ping == 'pong') {
-                        console.log(`#${this.id} got pong`);
+                        // console.log(`#${this.id} got pong`);
                         this.isAlive = true;
                     }
                     else {
-                        console.log(`#${this.id} got invalid response from server`);
+                        // console.log(`#${this.id} got invalid response from server`);
                         this.isAlive = false;
                     }
                     break;
                 case 'buy': 
-                    console.log(`#${this.id} buy`);
+                    // console.log(`#${this.id} buy`);
+                    message.returnedFromBinaryOn = Date.now();
                     if (response.error) {
                         // console.log(`${this.id} got error response`);
                         console.log(`${this.id} failed to follow advice of signalist`);
@@ -92,6 +94,7 @@ WebSocketAdapter.prototype.open = function() {
                             console.log(`${this.id} brought lot by advice of signalist`);
                         }
                     }
+                    this.onbinaryresponse(message)
                     break;
                 default:
                     console.log(`#${this.id} message unhandled - ${message}`);
@@ -127,5 +130,9 @@ WebSocketAdapter.prototype.buy = function(enrichedSignal) {
 
 WebSocketAdapter.prototype.close = function() {
     this.instance.close(1000);
+}
+
+WebSocketAdapter.prototype.onBinaryResponce = function(callback) {
+    this.onbinaryresponse = callback
 }
 module.exports = WebSocketAdapter;

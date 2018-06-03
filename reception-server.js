@@ -1,12 +1,16 @@
 const dgram = require('dgram');
 const config = require('./config.js').reception;
+const db = require('./config.js').db
 const uuidv4 = require('uuid/v4');
 const Cache = require('./cache.js');
 // var dba = require('./dba.js');
 var UdpServerAdapter = require('./udp-server-adapter.js');
+const MongoDbaAdapter = require('./mongo-dba-adapter.js')
 
 const server = new UdpServerAdapter();
 const cache = new Cache();
+const dba = new MongoDbaAdapter();
+dba.open(db.url);
 const client = dgram.createSocket('udp4');
 client.bind(() => {
     client.setBroadcast(true);
@@ -14,25 +18,27 @@ client.bind(() => {
 // client.setBroadcast(true);
 
 const process = async function (message) {
-    var receivedOn = Date.now();
-    var signalId = uuidv4();
-    var parsedOn = 0;
-    var finishedOn = 0;
-    var signalistId = '';
-    var processError = {};
-    var inboundMessage = message;
-    var outboundMessage = {};
+    const signal = {
+        receivedOn : Date.now(),
+        signalId : uuidv4(),
+        parsedOn : 0,
+        finishedOn : 0,
+        signalistId : '',
+        processError : {},
+        inboundMessage : message,
+        outboundMessage : {}
+    }
     try {
-        outboundMessage = JSON.parse(message);
-        const signalist = cache.signalists[outboundMessage.logints];
-        if (signalist && signalist.password == outboundMessage.passts) {
-            outboundMessage.signalistId = signalist.id;
-            outboundMessage.signalId = signalId;
-            outboundMessage.receivedOn = receivedOn;
-            const datagram = Buffer.from(JSON.stringify(outboundMessage));
+        signal.outboundMessage = JSON.parse(message);
+        const signalist = cache.signalists[signal.outboundMessage.logints];
+        if (signalist && signalist.password == signal.outboundMessage.passts) {
+            signal.outboundMessage.signalistId = signalist.id;
+            signal.outboundMessage.signalId = signal.signalId;
+            signal.outboundMessage.receivedOn = signal.receivedOn;
+            const datagram = Buffer.from(JSON.stringify(signal.outboundMessage));
             const address = config.broadcast.address;
             const port = config.broadcast.port;
-            parsedOn = Date.now();
+            signal.parsedOn = Date.now();
             client.send(datagram, port, address, (error) => { 
                 if (error) {console.log(error);}
             });
@@ -41,16 +47,12 @@ const process = async function (message) {
             throw new Error('invalid credentials');
         }
     } catch (error) {
-        processError = error;
+        signal.processError = error;
     }
-    // finishedOn = Date.now();
-    //console.debug(request);
-
-    //dba.inbound.insertOne(request);
+    dba.insertSignal(signal)
 };
 
 server.onMessage((message) => {
-    // console.debug(JSON.parse(message).debug);
     process(message);
 });
 server.onError((error) => {

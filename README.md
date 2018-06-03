@@ -12,10 +12,31 @@
 ## Под Windows
 
 * Установить [mongo](https://www.mongodb.com/download-center?jmp=nav#community) Communitys server, разработка велась под версией 3.6.4
-* Запустить базу данных, выполнив комманду mongod в окне комманд в субдиреткории bin, папки куда была совершенна установка 
+* Первый запуск
+  * Запустить базу данных, выполнив комманду mongod в окне комманд в субдиреткории bin, папки куда была совершенна установка 
 ```
-C:\Program Files\MongoDB\Server\3.6\bin>mongod
+mongod --dbpath /Users/olegsokolansky/Projects/wheel-db/ --port 27017 --replSet rs0 --bind_ip localhost,192.168.1.6
 ```
+  * **/Users/olegsokolansky/Projects/wheel-db/** - путь к папке с файлами базы данных
+  * **rs0** идентификатор группы репликации 
+  * **192.168.1.6** IP-адресс или хост-имя системы на котором запущенна база данных
+* Если IP-адресс или хост-имя системы изменились
+  * В новом окне комманд выполнить следующее
+```
+mongo
+use local
+cfg = db.system.replset.findOne()
+cfg.members[0].host = '192.168.1.6'
+db.system.replset.reconfig(cfg)
+db.system.replset.update({_id: "rs0"},cfg)
+```
+  * В новом окне комманд выполнить следующее
+```
+mongod --dbpath /Users/olegsokolansky/Projects/wheel-db/ --port 27017 --replSet rs0 --bind_ip localhost,192.168.1.6
+```
+  * **/Users/olegsokolansky/Projects/wheel-db/** - путь к папке с файлами базы данных
+  * **rs0** идентификатор группы репликации 
+  * **192.168.1.6** новы IP-адресс или хост-имя системы на котором запущенна база данных
 * Установить [node и npm](https://nodejs.org/en/) рекомендованной версии, разработка велась под 8.11.1
 * Скопировать файлы репозитария на диск в директорию **C:\Program Files (x86)\Autobot**
 * Изменить значения конфигруации в файле config.js
