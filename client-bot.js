@@ -106,7 +106,10 @@ client.bind(config.broadcast.port, config.broadcast.address, () => {});
 
 for (var index = 0; index < config.count; index++) {
     const wsClient = new WebSocketAdapter(config.url, cache.token);
-    wsClient.onBinaryResponce(binaryResponse => { dba.insertBinaryResponse(binaryResponse) })
+    wsClient.onBinaryResponce(binaryResponse => { 
+        binaryResponse.returnedFromBinaryOn = Date.now();
+        dba.insertBinaryResponse(binaryResponse) 
+    })
     wsClient.open();
     wsClients.push(wsClient);
     // setTimeout(() => {wsClient.buy('CALL', 'USD', 'frxEURUSD', 44.95, 5, 'm', 759)}, 5000);

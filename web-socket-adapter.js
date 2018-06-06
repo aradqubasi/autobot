@@ -79,7 +79,6 @@ WebSocketAdapter.prototype.open = function() {
                     break;
                 case 'buy': 
                     // console.log(`#${this.id} buy`);
-                    message.returnedFromBinaryOn = Date.now();
                     if (response.error) {
                         // console.log(`${this.id} got error response`);
                         console.log(`${this.id} failed to follow advice of signalist`);
@@ -94,7 +93,7 @@ WebSocketAdapter.prototype.open = function() {
                             console.log(`${this.id} brought lot by advice of signalist`);
                         }
                     }
-                    this.onbinaryresponse(message)
+                    this.onbinaryresponse(response)
                     break;
                 default:
                     console.log(`#${this.id} message unhandled - ${message}`);
@@ -103,6 +102,7 @@ WebSocketAdapter.prototype.open = function() {
         }
         catch (error) {
             console.log(`#${this.id} got unparseble message - ${message}`);
+            console.debug(error)
         }
     });
     this.instance.on('error', (error) => {

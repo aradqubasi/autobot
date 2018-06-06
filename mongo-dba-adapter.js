@@ -47,7 +47,7 @@ MongoDbaAdapter.prototype.insertClientRequest = function (request) {
 
 MongoDbaAdapter.prototype.insertBinaryResponse = function (response) {
     if (this.db) {
-        this.db.collection('BinaryResponses').insertOne(request).then(result => { 
+        this.db.collection('BinaryResponses').insertOne(response).then(result => { 
             console.log('MongoDbaAdapter.insertBinaryResponse inserted')
         }).catch(error => {
             error.note = 'MongoDbaAdapter.insertBinaryResponse(response)'
