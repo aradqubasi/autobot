@@ -1,20 +1,28 @@
 const MongoClient = require('mongodb').MongoClient;
 const fs = require('fs')
 const bots = [
-    'd8f3e120-ba1c-4553-9f64-f9e8c48528eb'
+    'bot1',
+	'bot2',
+	'bot3',
+	'bot4',
+	'bot5',
+	'bot6',
+	'bot7',
+	'bot8'
 ]
-const path = '/Users/olegsokolansky/Projects/stats.csv'
-const start = new Date('2018-06-04T22:20:00+03:00')
-const end = new Date('2018-06-04T22:20:59+03:00') 
-
+const path = 'stats.csv'
+const start = new Date('2018-06-06T21:19:00+03:00')
+const end = new Date('2018-06-06T21:30:00+03:00') 
+const url = 'mongodb://195.201.98.20:27017/mongotest'
+var progress = 0
 var report = {}
 var lines = []
 finalize = function () {
-    var header1 = 'signalId,avgTransmition,avgParsing,avgReturning'
+    var header1 = 'signalId,avgBroadcasting,avgSending,avgReturning'
     var header2 = ',,,'
     bots.forEach(botId => {
-        header1 += `,${botId},,`
-        header2 += ',,,'
+        header1 += `,${botId},${botId},${botId}`
+        header2 += ',Broadcasting,Sending,Returning'
     }, this)
     fs.writeFile(path, `${header1}\n${header2}\n`, function (err) {
         if (err) throw err;
@@ -34,7 +42,7 @@ finalize = function () {
         const botStats = report[signalId].botStats
         for (var botId in botStats) {
             const botStat = botStats[botId]
-            if (botStat && botStat.transmition) {
+            if (botStat && botStat.transmition != undefined) {
                 tuple.avgTransmition += botStat.transmition
                 tuple.transmittedQty++
                 suffix += `,${botStat.transmition}`
@@ -42,7 +50,7 @@ finalize = function () {
             else {
                 suffix += ',n/a'
             }
-            if (botStat && botStat.parsing) {
+            if (botStat && botStat.parsing != undefined) {
                 tuple.avgParsing += botStat.parsing
                 tuple.parsedQty++
                 suffix += `,${botStat.parsing}`
@@ -50,7 +58,7 @@ finalize = function () {
             else {
                 suffix += ',n/a'
             }
-            if (botStat && botStat.returning) {
+            if (botStat && botStat.returning != undefined) {
                 tuple.avgReturning += botStat.returning
                 tuple.returnedQty++
                 suffix += `,${botStat.returning}`
@@ -83,28 +91,15 @@ finalize = function () {
             if (err) throw err
         })
     }
-    // console.log('finalize')
-    // report[tuple.signalId].botStats[tuple.botId] = {
-    //     signalId: tuple.signalId,
-    //     botId: tuple.botId,
-    //     started: tuple.started,
-    //     transmitted: tuple.transmitted,
-    //     transmition: tuple.transmition,
-    //     parsed: tuple.parsed,
-    //     parsing: tuple.parsing,
-    //     returned: tuple.returned,
-    //     returning: tuple.returning
-    // }
-    // console.debug(report)
-    
 }
 
-MongoClient.connect('mongodb://localhost:27017/mongotest', { useNewUrlParser: true }).then( connection => {
+MongoClient.connect(url, { useNewUrlParser: true }).then( connection => {
     const db = connection.db();
     const whereReceivedOnBetween = {receivedOn: {$gt: start.getTime(), $lt: end.getTime()}}
     db.collection('Signals').count(whereReceivedOnBetween).then(count => {
         var processed = 0
         const expected = count * bots.length
+		console.log(`expected ${expected}`)
         db.collection('Signals').find(whereReceivedOnBetween, {signalId: 1, receivedOn: 1}).toArray((error, signals) => {
             if (error) {
                 console.debug(error)
@@ -134,7 +129,7 @@ MongoClient.connect('mongodb://localhost:27017/mongotest', { useNewUrlParser: tr
                                 if (request && request.parsedOn) {
                                     tuple.transmitted = request.receivedOn
                                     tuple.parsed = request.parsedOn
-                                    tuple.transmition = tuple.started - request.receivedOn
+                                    tuple.transmition = request.receivedOn - tuple.started
                                     tuple.parsing = tuple.parsed - tuple.transmitted
                                 }
                                 // else {
@@ -161,6 +156,8 @@ MongoClient.connect('mongodb://localhost:27017/mongotest', { useNewUrlParser: tr
                                     returned: tuple.returned,
                                     returning: tuple.returning
                                 }
+                                //console.debug(report[tuple.signalId].botStats[tuple.botId])
+								//console.log(processed / expected)
                                 if (processed == expected) {
                                     finalize()
                                     // console.debug(report['0ac842d4-99d8-47a0-8013-de22eb6d34a6'].botStats['d8f3e120-ba1c-4553-9f64-f9e8c48528eb'])
@@ -196,5 +193,5 @@ MongoClient.connect('mongodb://localhost:27017/mongotest', { useNewUrlParser: tr
     console.debug(error)
 });
 
-setTimeout(() => {process.exit()}, 5000)
+//setTimeout(() => {process.exit()}, 5000)
 

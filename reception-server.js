@@ -49,6 +49,7 @@ const process = async function (message) {
     } catch (error) {
         signal.processError = error;
     }
+    console.debug(signal)
     dba.insertSignal(signal)
 };
 

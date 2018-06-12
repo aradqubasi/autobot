@@ -13,6 +13,7 @@ function WebSocketAdapter(url, token) {
     id++;
     this.token = token;
     this.onbinaryresponse = () => { }
+    this.onprofittabledata = () => { }
 }
 
 WebSocketAdapter.prototype.authorize = function(token) {
@@ -95,6 +96,9 @@ WebSocketAdapter.prototype.open = function() {
                     }
                     this.onbinaryresponse(response)
                     break;
+                case 'profit_table':
+                    this.onprofittabledata(response)
+                    break
                 default:
                     console.log(`#${this.id} message unhandled - ${message}`);
                     break;
@@ -135,4 +139,19 @@ WebSocketAdapter.prototype.close = function() {
 WebSocketAdapter.prototype.onBinaryResponce = function(callback) {
     this.onbinaryresponse = callback
 }
+
+WebSocketAdapter.prototype.getProfitTable = function(offset, limit) {
+    const request = {
+       profit_table: 1,
+       description: 1,
+       limit: limit,
+       offset: offset
+    }
+    this.instance.send(JSON.stringify(request))
+}
+
+WebSocketAdapter.prototype.onProfitTableData = function (callback) {
+    this.onprofittabledata = callback
+}
+
 module.exports = WebSocketAdapter;
