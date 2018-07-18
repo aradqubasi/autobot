@@ -13,6 +13,8 @@ class Client {
         this.token = ''
         /** @type {String} */
         this.currency = ''
+        /** @type {Number} */
+        this.amount = 0
     }
 }
 
@@ -64,8 +66,43 @@ class ClientSignal {
         /** @type {Number} */
         this.price = 0
         /** @type {ClientSignalParameters} */
-        this.params = undefined
+        this.parameters = undefined
         /** @type {ClientSignalPassthrough} */
+        this.passthrough = undefined
+    }
+}
+
+class ClientGroup {
+    constructor() {
+        /** @type {String} */
+        this.symbol = ''
+        /** @type {Number} */
+        this.amount = 0
+        /** @type {String} */
+        this.currency = ''
+        /** @type {Client[]} */
+        this.clients = []
+    }
+}
+
+class MulticlientSignalPassthrough {
+    constructor() {
+         /** @type {String} */
+         this.multiclientSignalId = ''    
+    }
+}
+
+class MulticlientSignal {
+    constructor() {
+        /** @type {Number} */
+        this.buy_contract_for_multiple_accounts = 1
+        /** @type {Number} */
+        this.price = 0
+        /** @type {String[]} */
+        this.tokens = []
+        /** @type {ClientSignalParameters} */
+        this.parameters = undefined
+        /** @type {MulticlientSignalPassthrough} */
         this.passthrough = undefined
     }
 }
@@ -86,6 +123,25 @@ class ClientRequest {
         this.error = undefined
         /** @type {ClientSignal} */
         this.clientSignal = undefined
+    }
+}
+
+class MulticlientRequest {
+    constructor() {
+        /** @type {String} */
+        this._id = ''
+        /** @type {Number} */
+        this.requested = 0
+        /** @type {String} */
+        this.signalId = ''
+        /** @type {String} */
+        this.signalistId = ''
+        /** @type {ClientGroup} */
+        this.clients = undefined
+        /** @type {Error} */
+        this.error = undefined
+        /** @type {MulticlientSignal} */
+        this.multiclientSignal = undefined
     }
 }
 
@@ -163,13 +219,27 @@ class Cache {
 
             const subscriber1 = new Client()
             subscriber1._id = 'sub1'
-            subscriber1.token = 'xxxx1'
+            subscriber1.token = 'eHlqUl1lXl1Efm5'
             subscriber1.currency = 'USD'
+            subscriber1.amount = 1.33
 
             const subscriber2 = new Client()
             subscriber2._id = 'sub2'
-            subscriber2.token = 'xxxx2'
+            subscriber2.token = 'KDi2DBguCkqczU1'
             subscriber2.currency = 'USD'
+            subscriber2.amount = 1.33
+
+            const subscriber3 = new Client()
+            subscriber3._id = 'sub3'
+            subscriber3.token = 'JPEtlwUO5ED165D'
+            subscriber3.currency = 'USD'
+            subscriber3.amount = 1.66
+
+            const subscriber4 = new Client()
+            subscriber4._id = 'sub4'
+            subscriber4.token = 'QVZdAAH3y55ElE6'
+            subscriber4.currency = 'USD'
+            subscriber4.amount = 1.66
 
             const signalist1 = new Signalist()
             signalist1._id = 'sig1'
@@ -183,6 +253,8 @@ class Cache {
             signalist2.login = 'user'
             signalist2.password = 'p@$$word'
             signalist2.clients.push(subscriber1)
+            signalist2.clients.push(subscriber3)
+            signalist2.clients.push(subscriber4)
 
             this.signalists.push(signalist1)
             this.signalists.push(signalist2)
@@ -214,7 +286,7 @@ class Cache {
             }, 1000)
 
             setTimeout(() => { 
-                self.tokens = ['eHlqUl1lXl1Efm5']
+                self.tokens = ['J7SAn5qeKTpZt33']
                 self.onservicetokenschange(self.tokens)
             }, 1500)
         }
@@ -288,7 +360,7 @@ function processSignal(signalists, buffer) {
  * @param {SignalistRequest} request
  * @returns {ClientRequest} 
  */
-function processSignalistRequest(client, request) {
+function processSignalistRequestPerClient(client, request) {
     const clientRequest = new ClientRequest()
     try {
         clientRequest._id = uuidv4()
@@ -296,19 +368,19 @@ function processSignalistRequest(client, request) {
         clientRequest.signalistId = request.signalistId
         clientRequest.subscriberId = client._id
         clientRequest.clientSignal = new ClientRequest()
-        clientRequest.clientSignal.price = 1
-        clientRequest.clientSignal.params = new ClientSignalParameters()
-        clientRequest.clientSignal.params.amount = 1
-        clientRequest.clientSignal.params.contract_type = request.signal.callput
-        clientRequest.clientSignal.params.currency = client.currency
+        clientRequest.clientSignal.price = client.amount
+        clientRequest.clientSignal.parameters = new ClientSignalParameters()
+        clientRequest.clientSignal.parameters.amount = client.amount
+        clientRequest.clientSignal.parameters.contract_type = request.signal.callput
+        clientRequest.clientSignal.parameters.currency = client.currency
         if (request.signal.date_expiry) {
-            clientRequest.clientSignal.params.date_expiry = request.signal.date_expiry
+            clientRequest.clientSignal.parameters.date_expiry = request.signal.date_expiry
         }
         else {
-            clientRequest.clientSignal.params.duration = request.signal.duration
-            clientRequest.clientSignal.params.duration_unit = request.signal.duration_unit
+            clientRequest.clientSignal.parameters.duration = request.signal.duration
+            clientRequest.clientSignal.parameters.duration_unit = request.signal.duration_unit
         }
-        clientRequest.clientSignal.params.symbol = 'frx' + request.signal.symbol
+        clientRequest.clientSignal.parameters.symbol = 'frx' + request.signal.symbol
         clientRequest.clientSignal.passthrough = new ClientSignalPassthrough()
         clientRequest.clientSignal.passthrough.clientSignalId = clientRequest._id
     }
@@ -316,6 +388,48 @@ function processSignalistRequest(client, request) {
         clientRequest.error = error
     }
     return clientRequest
+}
+
+/** 
+ * @param {ClientGroup} clients
+ * @param {SignalistRequest} request
+ * @returns {MulticlientRequest} 
+ */
+function processSignalistRequestPerClientGroup(clients, request) {
+    console.log(`Worker ${process.pid} processSignalistRequestPerClientGroup`)
+    console.debug(clients)
+    const multiclientRequest = new MulticlientRequest()
+    try {
+        multiclientRequest._id = uuidv4()
+        multiclientRequest.signalId = request._id
+        multiclientRequest.signalistId = request.signalistId
+        multiclientRequest.clients = clients
+        multiclientRequest.multiclientSignal = new MulticlientSignal()
+        multiclientRequest.multiclientSignal.price = clients.amount
+        clients.clients.forEach(client => {
+            multiclientRequest.multiclientSignal.tokens.push(client.token)
+        })
+        multiclientRequest.multiclientSignal.parameters = new ClientSignalParameters()
+        multiclientRequest.multiclientSignal.parameters.amount = clients.amount
+        multiclientRequest.multiclientSignal.parameters.contract_type = request.signal.callput
+        multiclientRequest.multiclientSignal.parameters.currency = clients.currency
+        if (request.signal.date_expiry && request.signal.date_expiry != "") {
+            multiclientRequest.multiclientSignal.parameters.date_expiry = request.signal.date_expiry
+        }
+        else {
+            multiclientRequest.multiclientSignal.parameters.duration = request.signal.tfdigi
+            multiclientRequest.multiclientSignal.parameters.duration_unit = request.signal.tfdur
+        }
+        multiclientRequest.multiclientSignal.parameters.symbol = 'frx' + request.signal.symbol
+        multiclientRequest.multiclientSignal.passthrough = new MulticlientSignalPassthrough()
+        multiclientRequest.multiclientSignal.passthrough.multiclientSignalId = multiclientRequest._id
+    }
+    catch (error) {
+        multiclientRequest.error = error
+    }
+    // console.log('multiclientRequest')
+    // console.debug(multiclientRequest)
+    return multiclientRequest
 }
 
 class PingRequest {
@@ -370,19 +484,29 @@ class WebSocketAdapter {
             return false
         }
     }
-}
 
-WebSocketAdapter.prototype.heartbeat = function() {
-    if (this.adaptee && this.adaptee.readyState == WebSocket.prototype.OPEN) {
-        const pingRequest = new PingRequest()
-        this.adaptee.send(JSON.stringify(pingRequest))
+    /**
+     * @description authorize requst using service token
+     */
+    authorize() {
+        const authorizeRequest = new AuthorizeRequest()
+        authorizeRequest.authorize = this.token
+        this.adaptee.send(JSON.stringify(authorizeRequest))
+    }
+
+    /** 
+     * @description perform multibuy request 
+     * @param {MulticlientRequest} request
+     */
+    multibuy(request) {
+        const multibuyRequst = request.multiclientSignal
+        this.adaptee.send(JSON.stringify(multibuyRequst))
     }
 }
 
-WebSocketAdapter.prototype.authorize = function() {
-    const authorizeRequest = new AuthorizeRequest()
-    authorizeRequest.authorize = this.token
-    this.adaptee.send(JSON.stringify(authorizeRequest))
+/** @param {MulticlientRequest}*/
+WebSocketAdapter.prototype.send = function(request) {
+
 }
 
 if (cluster.isMaster) {
@@ -434,7 +558,7 @@ if (cluster.isMaster) {
             else if (!wsClient.didExist && wsClient.willExist) {
                 //open
                 wsClient.adaptee = new WebSocket(cache.urlOfBinary)
-                wsClient.adaptee.on('close', (ws, code, reason) => {
+                wsClient.adaptee.on('close', (code, reason) => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} closed with ${code} ${reason}`)
                     if (this.heartbeating) {
                         clearTimeout(this.heartbeating);
@@ -446,13 +570,13 @@ if (cluster.isMaster) {
                         // this.open();
                     }
                 })
-                wsClient.adaptee.on('error', (ws, error) => {
+                wsClient.adaptee.on('error', error => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} error`)
                     console.debug(error)
                 })
-                wsClient.adaptee.on('upgrade', (ws, request) => {
+                wsClient.adaptee.on('upgrade', request => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} upgrade`)
-                    console.debug(request)
+                    // console.debug(request)
                 })
                 wsClient.adaptee.on('message', buffer => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} message`)
@@ -464,15 +588,15 @@ if (cluster.isMaster) {
                     wsClient.heartbeating = setTimeout(() => wsClient.heartbeat(), 15000)
                     wsClient.authorize()
                 })
-                wsClient.adaptee.on('unexpected-response', (ws, request, response) => {
+                wsClient.adaptee.on('unexpected-response', (request, response) => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} unexpected-response`)
                     console.debug(request)
                     console.debug(response)
                 })
-                wsClient.adaptee.on('ping', (ws, buffer) => {
+                wsClient.adaptee.on('ping', buffer => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} ping`)
                 })
-                wsClient.adaptee.on('pong', (ws, buffer) => {
+                wsClient.adaptee.on('pong', buffer => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} pong`)
                 })
             }
@@ -497,6 +621,7 @@ if (cluster.isMaster) {
                 server.on('message', buffer => {
                     console.log(`Worker ${process.pid} received message`)
                     const signalistRequest = processSignal(cache.signalists, buffer)
+                    // db.write signalistRequest
                     if (signalistRequest.error) {
                         console.log(`Worker ${process.pid} error during message parsing`)
                         console.debug(signalistRequest)
@@ -504,24 +629,45 @@ if (cluster.isMaster) {
                     else {
                         console.log(`Worker ${process.pid} parsing successful`)
                         const signalist = cache.signalists.find(signalist => { return signalist._id == signalistRequest.signalistId })
+
+                        /** @type {ClientGroup[]} */
+                        var groups = []
+
+                        console.log(`Worker ${process.pid} grouping clients`)
+                        console.debug(signalist)
                         for (var j = 0; j < signalist.clients.length; j++) {
                             var client = signalist.clients[j]
-                            const clientRequest = processSignalistRequest(client, signalistRequest)
-                            if (clientRequest.error) {
-                                console.log(`Worker ${process.pid} error during creating of request for client ${client._id}`)
-                                console.debug(clientRequest)
+                            var group = groups.find(g => { g.amount == client.amount && g.currency == client.currency && g.symbol == signalistRequest.signal.symbol })
+                            if (group) {
+                                group.clients.push(client)                                
                             }
                             else {
-                                console.log(`Worker ${process.pid} created request for client ${client._id}`)
-                                var index = prevSocketIndex
+                                group = new ClientGroup()
+                                group.amount = client.amount
+                                group.currency = client.currency
+                                group.symbol = signalistRequest.signal.symbol
+                                group.clients = [client]
+                                groups.push(group)
+                            }
+                        }
+
+                        for (var k = 0; k < groups.length; k++) {
+                            var group = groups[k];
+
+                            const multiclientRequest = processSignalistRequestPerClientGroup(group, signalistRequest)
+                            if (multiclientRequest.error) {
+                                console.log(`Worker ${process.pid} error during creating of multiclient request`)
+                                console.debug(multiclientRequest)
+                            }
+                            else {
+                                console.log(`Worker ${process.pid} created multiclient request`)
+                                var index = Math.min(prevSocketIndex, wsClients.length - 1)
                                 var isSent = false
                                 for (index = prevSocketIndex + 1; index < wsClients.length; index++) {
                                     var wsClient = wsClients[index]
-                                    if (wsClient.isReady) {
+                                    if (wsClient && wsClient.isReady) {
                                         prevSocketIndex = index
-                                        wsClients[index].adaptee.send(JSON.stringify({
-                                            ping: 1
-                                        }))
+                                        wsClients[index].multibuy(multiclientRequest)
                                         isSent = true
                                         break
                                     }
@@ -529,11 +675,9 @@ if (cluster.isMaster) {
                                 if (!isSent) {
                                     for (index = 0; index <= prevSocketIndex; index++) {
                                         var wsClient = wsClients[index]
-                                        if (wsClient.isReady) {
+                                        if (wsClient && wsClient.isReady) {
                                             prevSocketIndex = index
-                                            wsClients[index].adaptee.send(JSON.stringify({
-                                                ping: 1
-                                            }))
+                                            wsClients[index].multibuy(multiclientRequest)
                                             isSent = true
                                             break
                                         }
@@ -547,6 +691,50 @@ if (cluster.isMaster) {
                                 }
                             }
                         }
+                        // const signalist = cache.signalists.find(signalist => { return signalist._id == signalistRequest.signalistId })
+                        // for (var j = 0; j < signalist.clients.length; j++) {
+                        //     var client = signalist.clients[j]
+                        //     const clientRequest = processSignalistRequest(client, signalistRequest)
+                        //     if (clientRequest.error) {
+                        //         console.log(`Worker ${process.pid} error during creating of request for client ${client._id}`)
+                        //         console.debug(clientRequest)
+                        //     }
+                        //     else {
+                        //         console.log(`Worker ${process.pid} created request for client ${client._id}`)
+                        //         var index = prevSocketIndex
+                        //         var isSent = false
+                        //         for (index = prevSocketIndex + 1; index < wsClients.length; index++) {
+                        //             var wsClient = wsClients[index]
+                        //             if (wsClient.isReady) {
+                        //                 prevSocketIndex = index
+                        //                 wsClients[index].adaptee.send(JSON.stringify({
+                        //                     ping: 1
+                        //                 }))
+                        //                 isSent = true
+                        //                 break
+                        //             }
+                        //         }
+                        //         if (!isSent) {
+                        //             for (index = 0; index <= prevSocketIndex; index++) {
+                        //                 var wsClient = wsClients[index]
+                        //                 if (wsClient.isReady) {
+                        //                     prevSocketIndex = index
+                        //                     wsClients[index].adaptee.send(JSON.stringify({
+                        //                         ping: 1
+                        //                     }))
+                        //                     isSent = true
+                        //                     break
+                        //                 }
+                        //             }
+                        //         }
+                        //         if (isSent) {
+                        //             console.log(`Worker ${process.pid} ws ${wsClients[prevSocketIndex].token} sent request for client ${client._id}`)
+                        //         }
+                        //         else {
+                        //             console.log(`Worker ${process.pid} cannot sent request all web sockets are not ready`)
+                        //         }
+                        //     }
+                        // }
                     }
                     //write(signalists)
                 })
