@@ -5,6 +5,18 @@ const numCPUs = require('os').cpus().length;
 const uuidv4 = require('uuid/v4')
 const WebSocket = require('ws')
 
+var Db = require('mongodb').Db,
+MongoClient = require('mongodb').MongoClient,
+Server = require('mongodb').Server,
+ReplSetServers = require('mongodb').ReplSetServers,
+ObjectID = require('mongodb').ObjectID,
+Binary = require('mongodb').Binary,
+GridStore = require('mongodb').GridStore,
+Grid = require('mongodb').Grid,
+Code = require('mongodb').Code,
+// BSON = require('mongodb').pure().BSON,
+assert = require('assert');
+
 class Client {
     constructor() {
        /** @type {String} */
@@ -185,11 +197,27 @@ class SignalistRequest {
     }
 }
 
+class ReceptionServer {
+    constructor () {
+        /** @type {String} */
+        this.name = ''
+        /** @type {Signalists[]} */
+        this.signalists = []
+        /** @type {Number[]} */
+        this.ports = []
+        /** @type {String[]} */
+        this.serviceTokens = []
+        /** @type {String} */
+        this.urlOfBinary = ''
+    }
+}
+
 class Cache {
     /**
      * @param {string} [url] Url to connect to database
+     * @param {String} [name] Name of the instance of reception server
      */
-    constructor(url) {
+    constructor(url, name) {
         /** @type {Signalist[]} */
         this.signalists = []
 
@@ -211,7 +239,10 @@ class Cache {
         */
         this.onservicetokenschange = (tokens) => { }
 
-        if (arguments.length == 0) {
+        /** @type {Db} */
+        this.db = undefined
+
+        if (arguments.length < 2) {
             //initialize from predefined collection
             console.log(`worker ${process.pid} instatiate ${typeof(this)} from test data`)
 
@@ -260,25 +291,6 @@ class Cache {
             this.signalists.push(signalist2)
 
             var self = this
-            // setTimeout(() => { 
-            //     self.ports = [40000]
-            //     self.onportschange(self.ports)
-            // }, 1000)
-
-            // setTimeout(() => { 
-            //     self.ports = [40001]
-            //     self.onportschange(self.ports)
-            // }, 5000)
-
-            // setTimeout(() => { 
-            //     self.ports = [40000]
-            //     self.onportschange(self.ports)
-            // }, 10000)
-
-            // setTimeout(() => { 
-            //     self.ports = [40000, 40001]
-            //     self.onportschange(self.ports)
-            // }, 15000)
 
             setTimeout(() => { 
                 self.ports = [40000, 40001]
@@ -292,8 +304,85 @@ class Cache {
         }
         else {
             //initialize from mongo database collection
+            console.log(`worker ${process.pid} instatiate ${typeof(this)} from db ${url}`)
+            MongoClient.connect(url, {
+                useNewUrlParser: true
+            }).then(client => {
+                this.db = client.db()
+                this.db.collection('ReceptionServers').watch({ 
+                    fullDocument: "updateLookup" 
+                }).on('change', data => {
+                    if (data && data.fullDocument && data.fullDocument.name == name) {
+                        /** @type {ReceptionServer} */
+                        var config = data.fullDocument
+                        this.ports = config.ports
+                        this.tokens = config.serviceTokens
+                        this.signalists = config.signalists
+                        this.urlOfBinary = config.urlOfBinary
+                        this.onportschange(this.ports)
+                        this.onservicetokenschange(this.tokens)
+                    }
+                })
+                this.db.collection('ReceptionServers').findOne({ 
+                    name: name 
+                }).then(data => {
+                    if (data) {
+                        /** @type {ReceptionServer} */
+                        var config = data
+                        this.ports = config.ports
+                        this.tokens = config.serviceTokens
+                        this.signalists = config.signalists
+                        this.urlOfBinary = config.urlOfBinary
+                        this.onportschange(this.ports)
+                        this.onservicetokenschange(this.tokens)
+                    } 
+                }).catch(error => {
+                    console.log(`worker ${process.pid} error while extracting initial value`)
+                    console.debug(error)
+                })
+            }).catch(error => {
+                console.log(`worker ${process.pid} error while connecting ${url}`)
+                console.debug(error)
+            })
         }
 
+    }
+
+    /**
+     * 
+     * @param {(SignalistRequest|MulticlientRequest)} value 
+     */
+    push(value) {
+        try {
+            if (SignalistRequest.prototype.isPrototypeOf(value)) {
+                /** @type {SignalistRequest} */
+                var signalistRequest = value
+                this.db.collection('SignalistRequests').insertOne(signalistRequest).then(() => {
+                    console.log(`Worker ${process.pid} pushed SignalistRequest`)
+                }).catch(error => {
+                    console.log(`Worker ${process.pid} error while pushing SignalistRequest`)
+                    console.debug(error)
+                })
+            }
+            else if (MulticlientRequest.prototype.isPrototypeOf(value)) {
+                /** @type {MulticlientRequest} */
+                var multiclientRequest = value
+                this.db.collection('MulticlientRequests').insertOne(multiclientRequest).then(() => {
+                    console.log(`Worker ${process.pid} pushed MulticlientRequest`)
+                }).catch(error => {
+                    console.log(`Worker ${process.pid} error while pushing MulticlientRequest`)
+                    console.debug(error)
+                })
+            }
+            else {
+                console.log(`Worker ${process.pid} can not push ${typeof(value)}`)
+                console.debug(value)
+            }
+        }
+        catch (error) {
+            console.log(`Worker ${process.pid} error while pushing ${typeof(value)}`)
+            console.debug(error)
+        }
     }
 }
 
@@ -525,7 +614,7 @@ if (cluster.isMaster) {
 
 } else {
     console.log(`Worker ${process.pid} started`)
-    const cache = new Cache()
+    const cache = new Cache('mongodb://178.128.12.94:27017/mongotest', 'slowpoke')
 
     /** @type {WebSocketAdapter[]} */
     var wsClients = []
@@ -585,7 +674,7 @@ if (cluster.isMaster) {
                 wsClient.adaptee.on('open', () => {
                     console.log(`Worker ${process.pid} ws ${wsClient.token} open`)
                     wsClient.heartbeat()
-                    wsClient.heartbeating = setTimeout(() => wsClient.heartbeat(), 15000)
+                    wsClient.heartbeating = setInterval(() => wsClient.heartbeat(), 15000)
                     wsClient.authorize()
                 })
                 wsClient.adaptee.on('unexpected-response', (request, response) => {
@@ -621,7 +710,7 @@ if (cluster.isMaster) {
                 server.on('message', buffer => {
                     console.log(`Worker ${process.pid} received message`)
                     const signalistRequest = processSignal(cache.signalists, buffer)
-                    // db.write signalistRequest
+                    cache.push(signalistRequest)
                     if (signalistRequest.error) {
                         console.log(`Worker ${process.pid} error during message parsing`)
                         console.debug(signalistRequest)
@@ -655,6 +744,7 @@ if (cluster.isMaster) {
                             var group = groups[k];
 
                             const multiclientRequest = processSignalistRequestPerClientGroup(group, signalistRequest)
+                            cache.push(multiclientRequest)
                             if (multiclientRequest.error) {
                                 console.log(`Worker ${process.pid} error during creating of multiclient request`)
                                 console.debug(multiclientRequest)
@@ -691,52 +781,8 @@ if (cluster.isMaster) {
                                 }
                             }
                         }
-                        // const signalist = cache.signalists.find(signalist => { return signalist._id == signalistRequest.signalistId })
-                        // for (var j = 0; j < signalist.clients.length; j++) {
-                        //     var client = signalist.clients[j]
-                        //     const clientRequest = processSignalistRequest(client, signalistRequest)
-                        //     if (clientRequest.error) {
-                        //         console.log(`Worker ${process.pid} error during creating of request for client ${client._id}`)
-                        //         console.debug(clientRequest)
-                        //     }
-                        //     else {
-                        //         console.log(`Worker ${process.pid} created request for client ${client._id}`)
-                        //         var index = prevSocketIndex
-                        //         var isSent = false
-                        //         for (index = prevSocketIndex + 1; index < wsClients.length; index++) {
-                        //             var wsClient = wsClients[index]
-                        //             if (wsClient.isReady) {
-                        //                 prevSocketIndex = index
-                        //                 wsClients[index].adaptee.send(JSON.stringify({
-                        //                     ping: 1
-                        //                 }))
-                        //                 isSent = true
-                        //                 break
-                        //             }
-                        //         }
-                        //         if (!isSent) {
-                        //             for (index = 0; index <= prevSocketIndex; index++) {
-                        //                 var wsClient = wsClients[index]
-                        //                 if (wsClient.isReady) {
-                        //                     prevSocketIndex = index
-                        //                     wsClients[index].adaptee.send(JSON.stringify({
-                        //                         ping: 1
-                        //                     }))
-                        //                     isSent = true
-                        //                     break
-                        //                 }
-                        //             }
-                        //         }
-                        //         if (isSent) {
-                        //             console.log(`Worker ${process.pid} ws ${wsClients[prevSocketIndex].token} sent request for client ${client._id}`)
-                        //         }
-                        //         else {
-                        //             console.log(`Worker ${process.pid} cannot sent request all web sockets are not ready`)
-                        //         }
-                        //     }
-                        // }
+                        
                     }
-                    //write(signalists)
                 })
                 server.on('listening', () => {
                     console.log(`Worker ${process.pid} start listening ${port}`)
@@ -760,7 +806,7 @@ if (cluster.isMaster) {
             }
         }
         // save ports
-        ports = Object.keys(servers)
+        ports = Object.keys(servers).filter(server => servers[server])
     })
 
 }
