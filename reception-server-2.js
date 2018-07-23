@@ -9,9 +9,9 @@ const logger = createLogger({
         format.json()
     ),
     transports: [
-        new transports.Console({
-            handleExceptions: true
-        }),
+        // new transports.Console({
+        //     handleExceptions: true
+        // }),
         new transports.File({ 
             filename: 'error.log', 
             level: 'error' 
@@ -643,7 +643,7 @@ if (cluster.isMaster) {
 
 } else {
     logger.info(`Worker ${process.pid} started`)
-    const cache = new Cache('mongodb://178.128.12.94:27017/mongotest', 'slowpoke')
+    const cache = new Cache(dburl, instance)
 
     /** @type {WebSocketAdapter[]} */
     var wsClients = []
@@ -762,7 +762,7 @@ if (cluster.isMaster) {
                         // logger.info(JSON.stringify(signalist))
                         for (var j = 0; j < signalist.clients.length; j++) {
                             var client = signalist.clients[j]
-                            var group = groups.find(g => { g.amount == client.amount && g.currency == client.currency && g.symbol == signalistRequest.signal.symbol })
+                            var group = groups.find(g => { return g.amount === client.amount && g.currency === client.currency && g.symbol === signalistRequest.signal.symbol })
                             if (group) {
                                 group.clients.push(client)                                
                             }
@@ -780,6 +780,7 @@ if (cluster.isMaster) {
                             var group = groups[k];
 
                             const multiclientRequest = processSignalistRequestPerClientGroup(group, signalistRequest)
+                            multiclientRequest.requested = Date.now()
                             cache.push(multiclientRequest)
                             if (multiclientRequest.error) {
                                 logger.info(`Worker ${process.pid} error during creating of multiclient request`)
