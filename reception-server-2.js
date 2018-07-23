@@ -1,3 +1,27 @@
+const instance = process.argv[2]//slowpoke
+const dburl = process.argv[3]//'mongodb://178.128.12.94:27017/mongotest'
+const {transports, createLogger, format} = require('winston')
+require('winston-mongodb')
+const logger = createLogger({
+    format: format.combine(
+        format.label({label: `${instance}`}),
+        format.timestamp(),
+        format.json()
+    ),
+    transports: [
+        new transports.Console({
+            handleExceptions: true
+        }),
+        new transports.File({ 
+            filename: 'error.log', 
+            level: 'error' 
+        }),
+        new transports.MongoDB({
+            db: dburl
+        })
+    ]
+})
+
 const dgram = require('dgram')
 const cluster = require('cluster')
 var UdpServerAdapter = require('./udp-server-adapter.js')
@@ -244,7 +268,7 @@ class Cache {
 
         if (arguments.length < 2) {
             //initialize from predefined collection
-            console.log(`worker ${process.pid} instatiate ${typeof(this)} from test data`)
+            logger.info(`worker ${process.pid} instatiate ${typeof(this)} from test data`)
 
             this.urlOfBinary = 'wss://ws.binaryws.com/websockets/v3?app_id=1'
 
@@ -304,7 +328,7 @@ class Cache {
         }
         else {
             //initialize from mongo database collection
-            console.log(`worker ${process.pid} instatiate ${typeof(this)} from db ${url}`)
+            logger.info(`worker ${process.pid} instatiate ${typeof(this)} from db ${url}`)
             MongoClient.connect(url, {
                 useNewUrlParser: true
             }).then(client => {
@@ -337,12 +361,12 @@ class Cache {
                         this.onservicetokenschange(this.tokens)
                     } 
                 }).catch(error => {
-                    console.log(`worker ${process.pid} error while extracting initial value`)
-                    console.debug(error)
+                    logger.info(`worker ${process.pid} error while extracting initial value`)
+                    logger.error(error.stack)
                 })
             }).catch(error => {
-                console.log(`worker ${process.pid} error while connecting ${url}`)
-                console.debug(error)
+                logger.info(`worker ${process.pid} error while connecting ${url}`)
+                logger.error(error.stack)
             })
         }
 
@@ -358,30 +382,38 @@ class Cache {
                 /** @type {SignalistRequest} */
                 var signalistRequest = value
                 this.db.collection('SignalistRequests').insertOne(signalistRequest).then(() => {
-                    console.log(`Worker ${process.pid} pushed SignalistRequest`)
+                    logger.info(`Worker ${process.pid} pushed SignalistRequest`)
                 }).catch(error => {
-                    console.log(`Worker ${process.pid} error while pushing SignalistRequest`)
-                    console.debug(error)
+                    logger.error(`Worker ${process.pid} error while pushing SignalistRequest`)
+                    logger.error(error.stack)
                 })
             }
             else if (MulticlientRequest.prototype.isPrototypeOf(value)) {
                 /** @type {MulticlientRequest} */
                 var multiclientRequest = value
                 this.db.collection('MulticlientRequests').insertOne(multiclientRequest).then(() => {
-                    console.log(`Worker ${process.pid} pushed MulticlientRequest`)
+                    logger.info(`Worker ${process.pid} pushed MulticlientRequest`)
                 }).catch(error => {
-                    console.log(`Worker ${process.pid} error while pushing MulticlientRequest`)
-                    console.debug(error)
+                    logger.error(`Worker ${process.pid} error while pushing MulticlientRequest`)
+                    logger.error(error.stack)
+                })
+            }
+            else if (value.msg_type) {
+                this.db.collection('BinaryResponses').insertOne(value).then(() => {
+                    logger.info(`Worker ${process.pid} pushed BinaryResponse`)
+                }).catch(error => {
+                    logger.error(`Worker ${process.pid} error while pushing BinaryResponse`)
+                    logger.error(error.stack)
                 })
             }
             else {
-                console.log(`Worker ${process.pid} can not push ${typeof(value)}`)
-                console.debug(value)
+                logger.error(`Worker ${process.pid} can not push ${typeof(value)}`)
+                // logger.error(value)
             }
         }
         catch (error) {
-            console.log(`Worker ${process.pid} error while pushing ${typeof(value)}`)
-            console.debug(error)
+            logger.error(`Worker ${process.pid} error while pushing ${typeof(value)}`)
+            logger.error(error.stack)
         }
     }
 }
@@ -485,8 +517,7 @@ function processSignalistRequestPerClient(client, request) {
  * @returns {MulticlientRequest} 
  */
 function processSignalistRequestPerClientGroup(clients, request) {
-    console.log(`Worker ${process.pid} processSignalistRequestPerClientGroup`)
-    console.debug(clients)
+    logger.info(`Worker ${process.pid} processSignalistRequestPerClientGroup`)
     const multiclientRequest = new MulticlientRequest()
     try {
         multiclientRequest._id = uuidv4()
@@ -516,8 +547,6 @@ function processSignalistRequestPerClientGroup(clients, request) {
     catch (error) {
         multiclientRequest.error = error
     }
-    // console.log('multiclientRequest')
-    // console.debug(multiclientRequest)
     return multiclientRequest
 }
 
@@ -599,21 +628,21 @@ WebSocketAdapter.prototype.send = function(request) {
 }
 
 if (cluster.isMaster) {
-    console.log(`Master ${process.pid} is running`);
+    logger.info(`Master ${process.pid} is running`);
 
     for (let i = 0; i < numCPUs; i++) {
         cluster.fork()
     }
 
     cluster.on('exit', (worker, code, signal) => {
-        console.log(`worker ${worker.process.pid} died`)
+        logger.info(`worker ${worker.process.pid} died`)
         cluster.fork()
     })
 
     // setTimeout(() => { cluster.disconnect() }, 10000)
 
 } else {
-    console.log(`Worker ${process.pid} started`)
+    logger.info(`Worker ${process.pid} started`)
     const cache = new Cache('mongodb://178.128.12.94:27017/mongotest', 'slowpoke')
 
     /** @type {WebSocketAdapter[]} */
@@ -648,7 +677,7 @@ if (cluster.isMaster) {
                 //open
                 wsClient.adaptee = new WebSocket(cache.urlOfBinary)
                 wsClient.adaptee.on('close', (code, reason) => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} closed with ${code} ${reason}`)
+                    logger.info(`Worker ${process.pid} ws ${wsClient.token} closed with ${code} ${reason}`)
                     if (this.heartbeating) {
                         clearTimeout(this.heartbeating);
                     }
@@ -660,33 +689,40 @@ if (cluster.isMaster) {
                     }
                 })
                 wsClient.adaptee.on('error', error => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} error`)
-                    console.debug(error)
+                    logger.error(`Worker ${process.pid} ws ${wsClient.token} error`)
+                    logger.error(error.stack)
                 })
                 wsClient.adaptee.on('upgrade', request => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} upgrade`)
-                    // console.debug(request)
+                    logger.info(`Worker ${process.pid} ws ${wsClient.token} upgrade`)
                 })
                 wsClient.adaptee.on('message', buffer => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} message`)
-                    console.debug(buffer)
+                    try {
+                        logger.info(`Worker ${process.pid} ws ${wsClient.token} message`)
+                        const echo = JSON.parse(buffer)
+                        echo.timestamp = Date.now()
+                        cache.push(echo)
+                    }
+                    catch (error) {
+                        logger.error(`Worker ${process.pid} ws ${wsClient.token} cannot parse message`)
+                        logger.error(error.stack)
+                    }
                 })
                 wsClient.adaptee.on('open', () => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} open`)
+                    logger.info(`Worker ${process.pid} ws ${wsClient.token} open`)
                     wsClient.heartbeat()
                     wsClient.heartbeating = setInterval(() => wsClient.heartbeat(), 15000)
                     wsClient.authorize()
                 })
                 wsClient.adaptee.on('unexpected-response', (request, response) => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} unexpected-response`)
-                    console.debug(request)
-                    console.debug(response)
+                    logger.info(`Worker ${process.pid} ws ${wsClient.token} unexpected-response`)
+                    logger.info(JSON.stringify(request))
+                    logger.info(JSON.stringify(response))
                 })
                 wsClient.adaptee.on('ping', buffer => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} ping`)
+                    logger.info(`Worker ${process.pid} ws ${wsClient.token} ping`)
                 })
                 wsClient.adaptee.on('pong', buffer => {
-                    console.log(`Worker ${process.pid} ws ${wsClient.token} pong`)
+                    logger.info(`Worker ${process.pid} ws ${wsClient.token} pong`)
                 })
             }
         })
@@ -708,22 +744,22 @@ if (cluster.isMaster) {
                 //if not exists - open
                 const server = dgram.createSocket({type: 'udp4', reuseAddr: true})
                 server.on('message', buffer => {
-                    console.log(`Worker ${process.pid} received message`)
+                    logger.info(`Worker ${process.pid} received message`)
                     const signalistRequest = processSignal(cache.signalists, buffer)
                     cache.push(signalistRequest)
                     if (signalistRequest.error) {
-                        console.log(`Worker ${process.pid} error during message parsing`)
-                        console.debug(signalistRequest)
+                        logger.info(`Worker ${process.pid} error during message parsing`)
+                        logger.info(signalistRequest)
                     }
                     else {
-                        console.log(`Worker ${process.pid} parsing successful`)
+                        logger.info(`Worker ${process.pid} parsing successful`)
                         const signalist = cache.signalists.find(signalist => { return signalist._id == signalistRequest.signalistId })
 
                         /** @type {ClientGroup[]} */
                         var groups = []
 
-                        console.log(`Worker ${process.pid} grouping clients`)
-                        console.debug(signalist)
+                        logger.info(`Worker ${process.pid} grouping clients`)
+                        // logger.info(JSON.stringify(signalist))
                         for (var j = 0; j < signalist.clients.length; j++) {
                             var client = signalist.clients[j]
                             var group = groups.find(g => { g.amount == client.amount && g.currency == client.currency && g.symbol == signalistRequest.signal.symbol })
@@ -746,11 +782,11 @@ if (cluster.isMaster) {
                             const multiclientRequest = processSignalistRequestPerClientGroup(group, signalistRequest)
                             cache.push(multiclientRequest)
                             if (multiclientRequest.error) {
-                                console.log(`Worker ${process.pid} error during creating of multiclient request`)
-                                console.debug(multiclientRequest)
+                                logger.info(`Worker ${process.pid} error during creating of multiclient request`)
+                                // logger.info(JSON.stringify(multiclientRequest))
                             }
                             else {
-                                console.log(`Worker ${process.pid} created multiclient request`)
+                                logger.info(`Worker ${process.pid} created multiclient request`)
                                 var index = Math.min(prevSocketIndex, wsClients.length - 1)
                                 var isSent = false
                                 for (index = prevSocketIndex + 1; index < wsClients.length; index++) {
@@ -774,10 +810,10 @@ if (cluster.isMaster) {
                                     }
                                 }
                                 if (isSent) {
-                                    console.log(`Worker ${process.pid} ws ${wsClients[prevSocketIndex].token} sent request for client ${client._id}`)
+                                    logger.info(`Worker ${process.pid} ws ${wsClients[prevSocketIndex].token} sent request for client ${client._id}`)
                                 }
                                 else {
-                                    console.log(`Worker ${process.pid} cannot sent request all web sockets are not ready`)
+                                    logger.error(`Worker ${process.pid} cannot sent request all web sockets are not ready`)
                                 }
                             }
                         }
@@ -785,7 +821,7 @@ if (cluster.isMaster) {
                     }
                 })
                 server.on('listening', () => {
-                    console.log(`Worker ${process.pid} start listening ${port}`)
+                    logger.info(`Worker ${process.pid} start listening ${port}`)
                 })
                 server.bind(port)
                 servers[port] = server
@@ -800,7 +836,7 @@ if (cluster.isMaster) {
             else {
                 //if not exists - close
                 servers[oldPort].close(() => {
-                    console.log(`Worker ${process.pid} stop listening ${oldPort}`)
+                    logger.info(`Worker ${process.pid} stop listening ${oldPort}`)
                 })
                 servers[oldPort] = undefined
             }
