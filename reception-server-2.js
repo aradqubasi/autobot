@@ -620,6 +620,62 @@ class WebSocketAdapter {
         const multibuyRequst = request.multiclientSignal
         this.adaptee.send(JSON.stringify(multibuyRequst))
     }
+
+    /**
+     * @description create and open socket connection
+     * @param {Cache} cache 
+     */
+    open(cache) {
+        this.adaptee = new WebSocket(cache.urlOfBinary)
+        this.adaptee.on('close', (code, reason) => {
+            logger.info(`Worker ${process.pid} ws ${this.token} closed with ${code} ${reason}`)
+            if (this.heartbeating) {
+                clearTimeout(this.heartbeating);
+            }
+            if (code == 1000) {
+                //expected close code
+            }
+            else {
+                this.open(cache)
+            }
+        })
+        this.adaptee.on('error', error => {
+            logger.error(`Worker ${process.pid} ws ${this.token} error`)
+            logger.error(error.stack)
+        })
+        this.adaptee.on('upgrade', request => {
+            logger.info(`Worker ${process.pid} ws ${this.token} upgrade`)
+        })
+        this.adaptee.on('message', buffer => {
+            try {
+                logger.info(`Worker ${process.pid} ws ${this.token} message`)
+                const echo = JSON.parse(buffer)
+                echo.timestamp = Date.now()
+                cache.push(echo)
+            }
+            catch (error) {
+                logger.error(`Worker ${process.pid} ws ${this.token} cannot parse message`)
+                logger.error(error.stack)
+            }
+        })
+        this.adaptee.on('open', () => {
+            logger.info(`Worker ${process.pid} ws ${this.token} open`)
+            this.heartbeat()
+            this.heartbeating = setInterval(() => this.heartbeat(), 15000)
+            this.authorize()
+        })
+        this.adaptee.on('unexpected-response', (request, response) => {
+            logger.info(`Worker ${process.pid} ws ${this.token} unexpected-response`)
+            logger.info(JSON.stringify(request))
+            logger.info(JSON.stringify(response))
+        })
+        this.adaptee.on('ping', buffer => {
+            logger.info(`Worker ${process.pid} ws ${this.token} ping`)
+        })
+        this.adaptee.on('pong', buffer => {
+            logger.info(`Worker ${process.pid} ws ${this.token} pong`)
+        })
+    }
 }
 
 /** @param {MulticlientRequest}*/
@@ -674,56 +730,7 @@ if (cluster.isMaster) {
                 wsClient.adaptee.close(1000)
             }
             else if (!wsClient.didExist && wsClient.willExist) {
-                //open
-                wsClient.adaptee = new WebSocket(cache.urlOfBinary)
-                wsClient.adaptee.on('close', (code, reason) => {
-                    logger.info(`Worker ${process.pid} ws ${wsClient.token} closed with ${code} ${reason}`)
-                    if (this.heartbeating) {
-                        clearTimeout(this.heartbeating);
-                    }
-                    if (code == 1000) {
-                        //expected close code
-                    }
-                    else {
-                        // this.open();
-                    }
-                })
-                wsClient.adaptee.on('error', error => {
-                    logger.error(`Worker ${process.pid} ws ${wsClient.token} error`)
-                    logger.error(error.stack)
-                })
-                wsClient.adaptee.on('upgrade', request => {
-                    logger.info(`Worker ${process.pid} ws ${wsClient.token} upgrade`)
-                })
-                wsClient.adaptee.on('message', buffer => {
-                    try {
-                        logger.info(`Worker ${process.pid} ws ${wsClient.token} message`)
-                        const echo = JSON.parse(buffer)
-                        echo.timestamp = Date.now()
-                        cache.push(echo)
-                    }
-                    catch (error) {
-                        logger.error(`Worker ${process.pid} ws ${wsClient.token} cannot parse message`)
-                        logger.error(error.stack)
-                    }
-                })
-                wsClient.adaptee.on('open', () => {
-                    logger.info(`Worker ${process.pid} ws ${wsClient.token} open`)
-                    wsClient.heartbeat()
-                    wsClient.heartbeating = setInterval(() => wsClient.heartbeat(), 15000)
-                    wsClient.authorize()
-                })
-                wsClient.adaptee.on('unexpected-response', (request, response) => {
-                    logger.info(`Worker ${process.pid} ws ${wsClient.token} unexpected-response`)
-                    logger.info(JSON.stringify(request))
-                    logger.info(JSON.stringify(response))
-                })
-                wsClient.adaptee.on('ping', buffer => {
-                    logger.info(`Worker ${process.pid} ws ${wsClient.token} ping`)
-                })
-                wsClient.adaptee.on('pong', buffer => {
-                    logger.info(`Worker ${process.pid} ws ${wsClient.token} pong`)
-                })
+                wsClient.open(cache)
             }
         })
 
@@ -781,6 +788,7 @@ if (cluster.isMaster) {
 
                             const multiclientRequest = processSignalistRequestPerClientGroup(group, signalistRequest)
                             multiclientRequest.requested = Date.now()
+                            console.debug(multiclientRequest)
                             cache.push(multiclientRequest)
                             if (multiclientRequest.error) {
                                 logger.info(`Worker ${process.pid} error during creating of multiclient request`)
