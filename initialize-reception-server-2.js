@@ -393,3 +393,27 @@ setClients().then(() => {
 }).catch(() => { 
     console.log('nope') 
 })
+
+var c ={ "_id" : ObjectId("5b523f50347e43001140fcc4"), "name" : "slowpoke", "ports" : [ 40000, 40001 ], "serviceTokens" : [ "J7SAn5qeKTpZt33" ], "signalists" : [ { "_id" : "sig1", "login" : "signalist1", "password" : "Aa@11111", "clients" : 
+[ 
+    { "_id" : "sub1", "token" : "y64zivPOMCOK4vB", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub2", "token" : "texSaMIEYAQ9VtH", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub3", "token" : "4v7SjpBVS5LaGvi", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub4", "token" : "3wC8enZlKXdY89c", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub5", "token" : "nfhDA6K47pTiUrI", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub6", "token" : "6l3bHYYUUIz5ABQ", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub7", "token" : "xGI0OANbngry3Ca", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub8", "token" : "YQmlRBTYAXAs83h", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub9", "token" : "lbWymdYoEKSrA9X", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub10", "token" : "z6272FfCB9YOoq9", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub11", "token" : "4OwrbE3Fuge7WHe", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub12", "token" : "Gqxlpueb2Ac184V", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub13", "token" : "U2UbkkUGFpNWmPc", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub14", "token" : "eHlqUl1lXl1Efm5", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub15", "token" : "3hKz4vhnvUJXk63", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub16", "token" : "AfkNKAb7wUlPaL6", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub17", "token" : "RUdoFBNdkCE0h6d", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub18", "token" : "Q8UlTFNG8p8ZtaZ", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub19", "token" : "fRTNU7vUlnbt0Hg", "currency" : "USD", "amount" : 1.33 }, 
+    { "_id" : "sub20", "token" : "QTmMfEaoZjt4KoW", "currency" : "USD", "amount" : 1.33 } 
+] } ], "urlOfBinary" : "wss://ws.binaryws.com/websockets/v3?app_id=1" }

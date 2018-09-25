@@ -1,3 +1,22 @@
+const Time = require('./model/Time')
+const Minute = require('./model/Minute')
+const HourInterval = require('./model/HourInterval')
+const InHourInterval = require('./model/InHourInterval')
+const Filter = require('./model/Filter')
+const Client = require('./model/Client')
+const Signalist = require('./model/Signalist')
+const ClientSignalPassthrough = require('./model/ClientSignalPassthrough')
+const ClientSignalParameters = require('./model/ClientSignalParameters')
+const ClientSignal = require('./model/ClientSignal')
+const ClientGroup = require('./model/ClientGroup')
+const MulticlientSignalPassthrough = require('./model/MulticlientSignalPassthrough')
+const MulticlientSignal = require('./model/MulticlientSignal')
+const ClientRequest = require('./model/ClientRequest')
+const MulticlientRequest = require('./model/MulticlientRequest')
+const Signal = require('./model/Signal')
+const SignalistRequest = require('./model/SignalistRequest')
+const ReceptionServer = require('./model/ReceptionServer')
+
 const instance = process.argv[2]//slowpoke
 const dburl = process.argv[3]//'mongodb://178.128.12.94:27017/mongotest'
 const {transports, createLogger, format} = require('winston')
@@ -9,9 +28,9 @@ const logger = createLogger({
         format.json()
     ),
     transports: [
-        // new transports.Console({
-        //     handleExceptions: true
-        // }),
+        new transports.Console({
+            handleExceptions: true
+        }),
         new transports.File({ 
             filename: 'error.log', 
             level: 'error' 
@@ -24,7 +43,6 @@ const logger = createLogger({
 
 const dgram = require('dgram')
 const cluster = require('cluster')
-var UdpServerAdapter = require('./udp-server-adapter.js')
 const numCPUs = require('os').cpus().length;
 const uuidv4 = require('uuid/v4')
 const WebSocket = require('ws')
@@ -38,203 +56,12 @@ Binary = require('mongodb').Binary,
 GridStore = require('mongodb').GridStore,
 Grid = require('mongodb').Grid,
 Code = require('mongodb').Code,
-// BSON = require('mongodb').pure().BSON,
 assert = require('assert');
 
-class Client {
-    constructor() {
-       /** @type {String} */
-        this._id = ''
-        /** @type {String} */
-        this.token = ''
-        /** @type {String} */
-        this.currency = ''
-        /** @type {Number} */
-        this.amount = 0
-    }
-}
-
-class Signalist {
-    constructor() {
-        /** @type {String} */
-        this._id = ''
-        /** @type {String} */
-        this.login = ''
-        /** @type {String} */
-        this.password = ''
-        /** @type {Client[]} */
-        this.clients = []
-    }
-}
-
-class ClientSignalPassthrough {
-    constructor() {
-         /** @type {String} */
-         this.clientSignalId = ''    
-    }
-}
-
-class ClientSignalParameters {
-    constructor() {
-        /** @type {String} */
-        this.basis = 'stake'
-        /** @type {String} */
-        this.contract_type = ''
-        /** @type {String} */
-        this.currency = ''
-        /** @type {String} */
-        this.symbol = ''
-        /** @type {Date} */
-        this.date_expiry = undefined
-        /** @type {Number} */
-        this.duration = undefined
-        /** @type {String} */
-        this.duration_unit = undefined
-        /** @type {Number} */
-        this.amount = 0
-    }
-}
-
-class ClientSignal {
-    constructor() {
-        /** @type {Number} */
-        this.buy = 1
-        /** @type {Number} */
-        this.price = 0
-        /** @type {ClientSignalParameters} */
-        this.parameters = undefined
-        /** @type {ClientSignalPassthrough} */
-        this.passthrough = undefined
-    }
-}
-
-class ClientGroup {
-    constructor() {
-        /** @type {String} */
-        this.symbol = ''
-        /** @type {Number} */
-        this.amount = 0
-        /** @type {String} */
-        this.currency = ''
-        /** @type {Client[]} */
-        this.clients = []
-    }
-}
-
-class MulticlientSignalPassthrough {
-    constructor() {
-         /** @type {String} */
-         this.multiclientSignalId = ''    
-    }
-}
-
-class MulticlientSignal {
-    constructor() {
-        /** @type {Number} */
-        this.buy_contract_for_multiple_accounts = 1
-        /** @type {Number} */
-        this.price = 0
-        /** @type {String[]} */
-        this.tokens = []
-        /** @type {ClientSignalParameters} */
-        this.parameters = undefined
-        /** @type {MulticlientSignalPassthrough} */
-        this.passthrough = undefined
-    }
-}
-
-class ClientRequest {
-    constructor() {
-        /** @type {String} */
-        this._id = ''
-        /** @type {Number} */
-        this.requested = 0
-        /** @type {String} */
-        this.signalId = ''
-        /** @type {String} */
-        this.signalistId = ''
-        /** @type {String} */
-        this.subscriberId = ''
-        /** @type {Error} */
-        this.error = undefined
-        /** @type {ClientSignal} */
-        this.clientSignal = undefined
-    }
-}
-
-class MulticlientRequest {
-    constructor() {
-        /** @type {String} */
-        this._id = ''
-        /** @type {Number} */
-        this.requested = 0
-        /** @type {String} */
-        this.signalId = ''
-        /** @type {String} */
-        this.signalistId = ''
-        /** @type {ClientGroup} */
-        this.clients = undefined
-        /** @type {Error} */
-        this.error = undefined
-        /** @type {MulticlientSignal} */
-        this.multiclientSignal = undefined
-    }
-}
-
-class Signal {
-    constructor() {
-        /** @type {String} signal*/
-        this.notify_type = ''
-        /** @type {String} CALL*/
-        this.callput = ''
-        /** @type {String} EURUSD*/
-        this.symbol = ''
-        /** @type {Number} */
-        this.tfdigi = 0
-        /** @type {String} 'm' */
-        this.tfdur = '' 
-        /** @type {Number} 15000000*/
-        this.date_expiry = 0
-        /** @type {String} 'user'*/
-        this.logints = '' 
-        /** @type {String} 'p@$$word'*/
-        this.passts = '' 
-        /** @type {Number} */
-        this.martin = 0
-    }
-}
-
-class SignalistRequest {
-    constructor() {
-        /** @type {String} */
-        this._id = ''
-        /** @type {Date} */
-        this.received = 0
-        /** @type {Error} */
-        this.error = undefined
-        /** @type {String} */
-        this.message = undefined
-        /** @type {Signal} */
-        this.signal = undefined
-        /** @type {String} */
-        this.signalistId = undefined
-    }
-}
-
-class ReceptionServer {
-    constructor () {
-        /** @type {String} */
-        this.name = ''
-        /** @type {Signalists[]} */
-        this.signalists = []
-        /** @type {Number[]} */
-        this.ports = []
-        /** @type {String[]} */
-        this.serviceTokens = []
-        /** @type {String} */
-        this.urlOfBinary = ''
-    }
-}
+const applyClientFilters = require('./logic/applyClientFilters')
+const processSignal = require('./logic/processSignal')
+const processSignalistRequestPerClient = require('./logic/processSignalistRequestPerClient')
+const processSignalistRequestPerClientGroup = require('./logic/processSignalistRequestPerClientGroup')
 
 class Cache {
     /**
@@ -242,8 +69,17 @@ class Cache {
      * @param {String} [name] Name of the instance of reception server
      */
     constructor(url, name) {
+        ///** @type {Client[]} */
+        // this.clients = []
+
+        /** @type {Map<String,Client>} */
+        this.clientsById = new Map()
+
         /** @type {Signalist[]} */
-        this.signalists = []
+        // this.signalists = []
+
+        /** @type {Map<String,Signalist>} */
+        this.signalistsByLogin = new Map()
 
         /** @type {Number[]} */
         this.ports = []
@@ -266,110 +102,83 @@ class Cache {
         /** @type {Db} */
         this.db = undefined
 
-        if (arguments.length < 2) {
-            //initialize from predefined collection
-            logger.info(`worker ${process.pid} instatiate ${typeof(this)} from test data`)
-
-            this.urlOfBinary = 'wss://ws.binaryws.com/websockets/v3?app_id=1'
-
-            const subscriber1 = new Client()
-            subscriber1._id = 'sub1'
-            subscriber1.token = 'eHlqUl1lXl1Efm5'
-            subscriber1.currency = 'USD'
-            subscriber1.amount = 1.33
-
-            const subscriber2 = new Client()
-            subscriber2._id = 'sub2'
-            subscriber2.token = 'KDi2DBguCkqczU1'
-            subscriber2.currency = 'USD'
-            subscriber2.amount = 1.33
-
-            const subscriber3 = new Client()
-            subscriber3._id = 'sub3'
-            subscriber3.token = 'JPEtlwUO5ED165D'
-            subscriber3.currency = 'USD'
-            subscriber3.amount = 1.66
-
-            const subscriber4 = new Client()
-            subscriber4._id = 'sub4'
-            subscriber4.token = 'QVZdAAH3y55ElE6'
-            subscriber4.currency = 'USD'
-            subscriber4.amount = 1.66
-
-            const signalist1 = new Signalist()
-            signalist1._id = 'sig1'
-            signalist1.login = 'signalist1'
-            signalist1.password = 'Aa@11111'
-            signalist1.clients.push(subscriber1)
-            signalist1.clients.push(subscriber2)
-
-            const signalist2 = new Signalist()
-            signalist2._id = 'sig2'
-            signalist2.login = 'user'
-            signalist2.password = 'p@$$word'
-            signalist2.clients.push(subscriber1)
-            signalist2.clients.push(subscriber3)
-            signalist2.clients.push(subscriber4)
-
-            this.signalists.push(signalist1)
-            this.signalists.push(signalist2)
-
-            var self = this
-
-            setTimeout(() => { 
-                self.ports = [40000, 40001]
-                self.onportschange(self.ports)
-            }, 1000)
-
-            setTimeout(() => { 
-                self.tokens = ['J7SAn5qeKTpZt33']
-                self.onservicetokenschange(self.tokens)
-            }, 1500)
-        }
-        else {
-            //initialize from mongo database collection
-            logger.info(`worker ${process.pid} instatiate ${typeof(this)} from db ${url}`)
-            MongoClient.connect(url, {
-                useNewUrlParser: true
-            }).then(client => {
-                this.db = client.db()
-                this.db.collection('ReceptionServers').watch({ 
-                    fullDocument: "updateLookup" 
-                }).on('change', data => {
-                    if (data && data.fullDocument && data.fullDocument.name == name) {
-                        /** @type {ReceptionServer} */
-                        var config = data.fullDocument
-                        this.ports = config.ports
-                        this.tokens = config.serviceTokens
-                        this.signalists = config.signalists
-                        this.urlOfBinary = config.urlOfBinary
-                        this.onportschange(this.ports)
-                        this.onservicetokenschange(this.tokens)
-                    }
-                })
-                this.db.collection('ReceptionServers').findOne({ 
-                    name: name 
-                }).then(data => {
-                    if (data) {
-                        /** @type {ReceptionServer} */
-                        var config = data
-                        this.ports = config.ports
-                        this.tokens = config.serviceTokens
-                        this.signalists = config.signalists
-                        this.urlOfBinary = config.urlOfBinary
-                        this.onportschange(this.ports)
-                        this.onservicetokenschange(this.tokens)
-                    } 
-                }).catch(error => {
-                    logger.info(`worker ${process.pid} error while extracting initial value`)
-                    logger.error(error.stack)
-                })
+        logger.info(`worker ${process.pid} instatiate ${typeof(this)} from db ${url}`)
+        MongoClient.connect(url, {
+            useNewUrlParser: true
+        }).then(client => {
+            this.db = client.db()
+            this.db.collection('ReceptionServers').watch({ 
+                fullDocument: "updateLookup" 
+            }).on('change', data => {
+                if (data && data.fullDocument && data.fullDocument.name == name) {
+                    this.handleReceptionServer(fullDocument)
+                }
+            })
+            this.db.collection('Signalists').watch({ 
+                fullDocument: "updateLookup" 
+            }).on('change', data => {
+                if (data && data.fullDocument) {
+                    this.handleSignalist(fullDocument)
+                }
+            })
+            this.db.collection('Clients').watch({ 
+                fullDocument: "updateLookup" 
+            }).on('change', data => {
+                if (data && data.fullDocument) {
+                    this.handleClient(fullDocument)
+                }
+            })
+            this.db.collection('ReceptionServers').findOne({ 
+                name: name 
+            }).then(data => {
+                logger.info(`worker ${process.pid} extracting initial value`)
+                this.handleReceptionServer(data)
             }).catch(error => {
-                logger.info(`worker ${process.pid} error while connecting ${url}`)
+                logger.info(`worker ${process.pid} error while extracting initial value`)
                 logger.error(error.stack)
             })
-        }
+            
+        }).catch(error => {
+            logger.info(`worker ${process.pid} error while connecting ${url}`)
+            logger.error(error.stack)
+        })
+    }
 
+    /** @param {ReceptionServer} data - update state according */
+    handleReceptionServer(data) {
+        this.ports = data.ports
+        this.tokens = data.serviceTokens
+        this.urlOfBinary = config.urlOfBinary
+        this.signalistsByLogin.clear()
+        this.clientsById.clear()
+        
+        data.signalistIds.forEach(signalistId => {
+            this.db.collection('Signalists').findOne({ _id: signalistId}).then(data => {
+                this.handleSignalist(data)
+            }).catch(error => {
+                logger.error(`Error during extracting of signalist ${signalistId} ${error.stack}`)
+            })
+        })
+
+        this.onportschange(this.ports)
+        this.onservicetokenschange(this.tokens)
+    }
+
+    /** @param {Signalist} data - update state according */
+    handleSignalist(data) {
+        this.signalistsByLogin.set(signalist.login, signalist)
+        data.clientIds.forEach(clientId => {
+            this.db.collection('Clients').findOne({_id: clientId}).then(data => {
+                this.handleClient(data)
+            }).catch(error => {
+                logger.error(`Error during extracting of client ${clientId} ${error.stack}`)
+            })
+        })
+    }
+
+    /** @param {Client} data - update state according */
+    handleClient(data) {
+        this.clientsById.set(data._id, data)
     }
 
     /**
@@ -432,122 +241,6 @@ Cache.prototype.onPortsChange = function(callback) {
  */
 Cache.prototype.onServiceTokensChange = function(callback) {
     this.onservicetokenschange = callback
-}
-
-
-
-/** 
- * @param {Signalist[]} [signalists] signalists collection
- * @param {Buffer} [buffer] buffer object containing signal
- * @returns {SignalistRequest} 
- */
-function processSignal(signalists, buffer) {
-    const signalistRequest = new SignalistRequest()
-    try {
-        signalistRequest.received = Date.now()
-        signalistRequest._id = uuidv4()
-        signalistRequest.message = buffer
-        signalistRequest.message = JSON.parse(buffer)
-
-        signalistRequest.signal = new Signal()
-        signalistRequest.signal.logints = signalistRequest.message.logints
-        signalistRequest.signal.callput = signalistRequest.message.callput
-        signalistRequest.signal.date_expiry = signalistRequest.message.date_expiry
-        signalistRequest.signal.martin = signalistRequest.message.martin
-        signalistRequest.signal.notify_type = signalistRequest.message.notify_type
-        signalistRequest.signal.passts = signalistRequest.message.passts
-        signalistRequest.signal.symbol = signalistRequest.message.symbol
-        signalistRequest.signal.tfdigi = signalistRequest.message.tfdigi
-        signalistRequest.signal.tfdur = signalistRequest.message.tfdur
-
-        const signalist = signalists.find(signalist => { return signalist.login == signalistRequest.signal.logints })
-        signalistRequest.signalistId = signalist._id
-
-        if (signalist && signalist.password == signalistRequest.signal.passts) {
-            //proceed
-        }
-        else {
-            throw new Error('invalid credentials');
-        }
-    }
-    catch (error) {
-        signalistRequest.error = error
-    }
-    return signalistRequest
-}
-
-/** 
- * @param {Client} client
- * @param {SignalistRequest} request
- * @returns {ClientRequest} 
- */
-function processSignalistRequestPerClient(client, request) {
-    const clientRequest = new ClientRequest()
-    try {
-        clientRequest._id = uuidv4()
-        clientRequest.signalId = request._id
-        clientRequest.signalistId = request.signalistId
-        clientRequest.subscriberId = client._id
-        clientRequest.clientSignal = new ClientRequest()
-        clientRequest.clientSignal.price = client.amount
-        clientRequest.clientSignal.parameters = new ClientSignalParameters()
-        clientRequest.clientSignal.parameters.amount = client.amount
-        clientRequest.clientSignal.parameters.contract_type = request.signal.callput
-        clientRequest.clientSignal.parameters.currency = client.currency
-        if (request.signal.date_expiry) {
-            clientRequest.clientSignal.parameters.date_expiry = request.signal.date_expiry
-        }
-        else {
-            clientRequest.clientSignal.parameters.duration = request.signal.duration
-            clientRequest.clientSignal.parameters.duration_unit = request.signal.duration_unit
-        }
-        clientRequest.clientSignal.parameters.symbol = 'frx' + request.signal.symbol
-        clientRequest.clientSignal.passthrough = new ClientSignalPassthrough()
-        clientRequest.clientSignal.passthrough.clientSignalId = clientRequest._id
-    }
-    catch (error) {
-        clientRequest.error = error
-    }
-    return clientRequest
-}
-
-/** 
- * @param {ClientGroup} clients
- * @param {SignalistRequest} request
- * @returns {MulticlientRequest} 
- */
-function processSignalistRequestPerClientGroup(clients, request) {
-    logger.info(`Worker ${process.pid} processSignalistRequestPerClientGroup`)
-    const multiclientRequest = new MulticlientRequest()
-    try {
-        multiclientRequest._id = uuidv4()
-        multiclientRequest.signalId = request._id
-        multiclientRequest.signalistId = request.signalistId
-        multiclientRequest.clients = clients
-        multiclientRequest.multiclientSignal = new MulticlientSignal()
-        multiclientRequest.multiclientSignal.price = clients.amount
-        clients.clients.forEach(client => {
-            multiclientRequest.multiclientSignal.tokens.push(client.token)
-        })
-        multiclientRequest.multiclientSignal.parameters = new ClientSignalParameters()
-        multiclientRequest.multiclientSignal.parameters.amount = clients.amount
-        multiclientRequest.multiclientSignal.parameters.contract_type = request.signal.callput
-        multiclientRequest.multiclientSignal.parameters.currency = clients.currency
-        if (request.signal.date_expiry && request.signal.date_expiry != "") {
-            multiclientRequest.multiclientSignal.parameters.date_expiry = request.signal.date_expiry
-        }
-        else {
-            multiclientRequest.multiclientSignal.parameters.duration = request.signal.tfdigi
-            multiclientRequest.multiclientSignal.parameters.duration_unit = request.signal.tfdur
-        }
-        multiclientRequest.multiclientSignal.parameters.symbol = 'frx' + request.signal.symbol
-        multiclientRequest.multiclientSignal.passthrough = new MulticlientSignalPassthrough()
-        multiclientRequest.multiclientSignal.passthrough.multiclientSignalId = multiclientRequest._id
-    }
-    catch (error) {
-        multiclientRequest.error = error
-    }
-    return multiclientRequest
 }
 
 class PingRequest {
@@ -678,11 +371,6 @@ class WebSocketAdapter {
     }
 }
 
-/** @param {MulticlientRequest}*/
-WebSocketAdapter.prototype.send = function(request) {
-
-}
-
 if (cluster.isMaster) {
     logger.info(`Master ${process.pid} is running`);
 
@@ -694,8 +382,6 @@ if (cluster.isMaster) {
         logger.info(`worker ${worker.process.pid} died`)
         cluster.fork()
     })
-
-    // setTimeout(() => { cluster.disconnect() }, 10000)
 
 } else {
     logger.info(`Worker ${process.pid} started`)
@@ -767,9 +453,11 @@ if (cluster.isMaster) {
 
                         logger.info(`Worker ${process.pid} grouping clients`)
                         // logger.info(JSON.stringify(signalist))
-                        for (var j = 0; j < signalist.clients.length; j++) {
-                            var client = signalist.clients[j]
-                            var group = groups.find(g => { return g.amount === client.amount && g.currency === client.currency && g.symbol === signalistRequest.signal.symbol })
+                        for (var j = 0; j < signalist.clientIds.length; j++) {
+                            var clientId = signalist.clients[j]
+                            var client = cache.clientsById.get(clientId)
+                            if (applyClientFilters(client.filters, signalist._id))
+                            var group = groups.find(g => { return g.amount === client.amount && g.currency === client.currency})
                             if (group) {
                                 group.clients.push(client)                                
                             }
@@ -777,7 +465,6 @@ if (cluster.isMaster) {
                                 group = new ClientGroup()
                                 group.amount = client.amount
                                 group.currency = client.currency
-                                group.symbol = signalistRequest.signal.symbol
                                 group.clients = [client]
                                 groups.push(group)
                             }

@@ -1,8 +1,7 @@
 const MongoClient = require('mongodb').MongoClient;
 const WebSocket = require('ws')
 
-const start = (new Date('2018-06-07T16:30:00.000+03:00')).getTime()
-const end = (new Date('2018-06-08T20:30:00.000+03:00')).getTime()
+
 // const db = (await MongoClient.connect('mongodb://195.201.98.20:27017/mongotest', {useNewUrlParser: true})).db()
 // const db = (await MongoClient.connect('mongodb://195.201.98.20:27017/mongotest', {useNewUrlParser: true})).db()
 
@@ -88,7 +87,7 @@ bots['bot20'] = {
     token: 'QTmMfEaoZjt4KoW'
 }
 
-async function loadProfitTable(binary, mongo, botId, token, start, end) {
+async function loadProfitTable(binary, mongo, token, start, end) {
     var profits = []
 
     const ws = new WebSocket(binary)
@@ -200,11 +199,18 @@ async function loadProfitTable(binary, mongo, botId, token, start, end) {
     }
     while (next)
 
-    const db = (await MongoClient.connect('mongodb://195.201.98.20:27017/mongotest', {useNewUrlParser: true})).db()
+    const db = (await MongoClient.connect(mongo, {useNewUrlParser: true})).db()
 
-    await db.collection('Profits').insertMany(profits)
+    var clientProfits = profits.map(value => { 
+        return {
+            token: token,
+            profit_table: value
+        }
+    })
 
-    return profits
+    await db.collection('ClientProfits').insertMany(clientProfits)
+
+    return clientProfits
 }
 
 // loadProfitTable('wss://ws.binaryws.com/websockets/v3?app_id=1', 'mongodb://195.201.98.20:27017/mongotest', bots['bot1'].botId, bots['bot1'].token, start, end)
@@ -217,7 +223,7 @@ async function loadProfitTables(bots, start, end) {
         
             console.log(`${bot.botId} ${bot.token} start`)
             
-            const profits = await loadProfitTable('wss://ws.binaryws.com/websockets/v3?app_id=1', 'mongodb://195.201.98.20:27017/mongotest', bot.botId, bot.token, start, end)
+            const profits = await loadProfitTable('wss://ws.binaryws.com/websockets/v3?app_id=1', 'mongodb://178.128.12.94:27017/mongotest', bot.token, start, end)
             bots[key].profits = profits
             console.log(`${bot.botId} ${bot.token} loaded ${profits.length}`)
         }
@@ -227,4 +233,6 @@ async function loadProfitTables(bots, start, end) {
     }
 }
 
+const start = (new Date('2018-07-25T00:30:00.000+03:00')).getTime()
+const end = (new Date('2018-07-27T06:30:00.000+03:00')).getTime()
 loadProfitTables(bots, start, end)

@@ -1,0 +1,50 @@
+{ 
+    "_id" : "5b5623ca03bee63fd3e165ee", 
+    "buy_contract_for_multiple_accounts" : 
+    { 
+        "result" : 
+        [ 
+            { 
+                "buy_price" : "1.66", 
+                "contract_id" : "29812323968", 
+                "longcode" : "Win payout if EUR/USD is strictly higher than entry spot at 5 minutes after contract start time.", 
+                "payout" : "3.13", 
+                "purchase_time" : 1532371913, 
+                "shortcode" : "CALL_FRXEURUSD_3.13_1532371913_1532372213_S0P_0", 
+                "start_time" : 1532371913, 
+                "token" : "QVZdAAH3y55ElE6", 
+                "transaction_id" : "59553402428" 
+            } 
+        ] 
+    }, 
+    "echo_req" : 
+    { 
+        "buy_contract_for_multiple_accounts" : 1, 
+        "parameters" : 
+        { 
+            "amount" : 1.66, 
+            "app_markup_percentage" : "0", 
+            "basis" : "stake", 
+            "contract_type" : "CALL", 
+            "currency" : "USD", 
+            "duration" : "5", 
+            "duration_unit" : "m", 
+            "symbol" : "frxEURUSD" 
+        }, 
+        "passthrough" : 
+        { 
+            "multiclientSignalId" : "ab151983-70dd-4ffd-b901-f15178de97af" 
+        }, 
+        "price" : 1.66, 
+        "tokens" : 
+        [ 
+            "QVZdAAH3y55ElE6" 
+        ] 
+    }, 
+    "msg_type" : "buy_contract_for_multiple_accounts", 
+    "passthrough" : 
+    { 
+        "multiclientSignalId" : "ab151983-70dd-4ffd-b901-f15178de97af" 
+    }, 
+    "timestamp" : 1532371914346 
+}
